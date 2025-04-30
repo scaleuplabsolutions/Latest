@@ -346,6 +346,71 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* Expiry Chart */}
+      <div className="mt-8">
+        <h2 className="text-lg font-medium text-neutral-900 mb-4">
+          <div className="flex items-center">
+            <Calendar className="h-5 w-5 mr-2 text-primary" />
+            Upcoming Expiry Dates
+          </div>
+        </h2>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-medium">Product Expiry Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {chartLoading ? (
+              <div className="flex justify-center items-center h-80">
+                <p>Loading expiry data...</p>
+              </div>
+            ) : groupedChartData.length === 0 ? (
+              <div className="flex justify-center items-center h-80">
+                <p>No upcoming expiry dates found</p>
+              </div>
+            ) : (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={groupedChartData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                    <XAxis 
+                      dataKey="date" 
+                      angle={-45} 
+                      textAnchor="end" 
+                      tick={{ fontSize: 12 }}
+                      height={60}
+                    />
+                    <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'Quantity', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" label={{ value: 'Products', angle: 90, position: 'insideRight' }} />
+                    <Tooltip 
+                      formatter={(value: number, name: string) => [value, name === 'quantity' ? 'Total Quantity' : 'Unique Products']}
+                      labelFormatter={(label) => `Expiry Date: ${label}`}
+                    />
+                    <Legend verticalAlign="top" height={36} />
+                    <Bar 
+                      yAxisId="left"
+                      name="Total Quantity" 
+                      dataKey="quantity" 
+                      fill="#8884d8" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      yAxisId="right"
+                      name="Unique Products" 
+                      dataKey="products" 
+                      fill="#82ca9d" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Recent Activity */}
       <div className="mt-8">
         <h2 className="text-lg font-medium text-neutral-900 mb-4">Recent Activity</h2>
