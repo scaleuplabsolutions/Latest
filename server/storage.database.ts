@@ -165,8 +165,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStockDeduction(deduction: InsertStockDeduction): Promise<StockDeduction> {
-    const result = await db.insert(stockDeductions).values(deduction).returning();
-    return result[0];
+    console.log("Creating stock deduction:", JSON.stringify(deduction));
+    
+    // TypeScript fix: Create a clean object with only the valid properties from schema
+    const cleanDeduction = {
+      systemType: deduction.systemType,
+      description: deduction.description,
+      upc: deduction.upc,
+      batchNumber: deduction.batchNumber,
+      expiryDate: deduction.expiryDate,
+      qtyDeducted: deduction.qtyDeducted,
+      fefoApplied: deduction.fefoApplied ?? true
+    };
+    
+    try {
+      const result = await db.insert(stockDeductions).values(cleanDeduction).returning();
+      console.log("Stock deduction created successfully");
+      return result[0];
+    } catch (error) {
+      console.error("Error creating stock deduction:", error);
+      throw error;
+    }
   }
 
   // Activities
@@ -180,8 +199,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createActivity(activity: InsertActivity): Promise<Activity> {
-    const result = await db.insert(activities).values(activity).returning();
-    return result[0];
+    console.log("Creating activity:", JSON.stringify(activity));
+    
+    // TypeScript fix: Create a clean object with only the valid properties from schema
+    const cleanActivity = {
+      systemType: activity.systemType,
+      type: activity.type,
+      title: activity.title,
+      description: activity.description ?? null,
+      category: activity.category ?? null
+    };
+    
+    try {
+      const result = await db.insert(activities).values(cleanActivity).returning();
+      console.log("Activity created successfully");
+      return result[0];
+    } catch (error) {
+      console.error("Error creating activity:", error);
+      throw error;
+    }
   }
 
   // Expiry-related methods
