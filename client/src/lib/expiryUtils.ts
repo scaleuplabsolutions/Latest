@@ -41,15 +41,20 @@ export const getStatusColor = (status: string): string => {
 };
 
 export interface ExpiryItem {
+  id: number;
   upc: string;
   description: string;
-  category?: string;
+  supplier?: string;
   batchNumber: string;
-  quantity: number;
-  receivedDate: string;
+  remainingQty?: number;
+  receivingDate: string;
   expiryDate: string;
   daysLeft: number;
   status: string;
+  container?: string;
+  itemNumber?: string;
+  qtyReceived?: number;
+  lastUpdated?: string;
 }
 
 export interface InventoryItem {

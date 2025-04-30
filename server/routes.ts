@@ -483,9 +483,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let items = await storage.getExpiryItems(systemType, status as any);
       
+      // Process items to add daysLeft and status
+      const today = new Date();
+      items = items.map(item => {
+        const expiryDate = new Date(item.expiryDate);
+        const daysLeft = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        let itemStatus = 'good';
+        if (daysLeft < 0) {
+          itemStatus = 'expired';
+        } else if (daysLeft <= 7) {
+          itemStatus = 'short-dated';
+        } else if (daysLeft <= 14) {
+          itemStatus = 'expiring-soon';
+        }
+        
+        return {
+          ...item,
+          daysLeft,
+          status: itemStatus
+        };
+      });
+      
       // Filter by category if provided
       if (category) {
-        items = items.filter(item => item.sdeptName === category);
+        items = items.filter(item => item.supplier === category);
       }
       
       // Filter by search term if provided

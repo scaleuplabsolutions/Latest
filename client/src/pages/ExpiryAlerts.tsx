@@ -59,7 +59,7 @@ const ExpiryAlerts: React.FC = () => {
     if (!expiryItems) return [];
     const uniqueCategories = new Set<string>();
     expiryItems.forEach(item => {
-      if (item.sdeptName) uniqueCategories.add(item.sdeptName);
+      if (item.supplier) uniqueCategories.add(item.supplier);
     });
     return Array.from(uniqueCategories);
   }, [expiryItems]);
@@ -92,7 +92,7 @@ const ExpiryAlerts: React.FC = () => {
   const columns = [
     { header: 'UPC', accessor: 'upc' },
     { header: 'Description', accessor: 'description' },
-    { header: 'Category', accessor: 'sdeptName' },
+    { header: 'Supplier', accessor: 'supplier' },
     { header: 'Batch #', accessor: 'batchNumber' },
     { header: 'Qty', accessor: 'remainingQty' },
     { header: 'Received', accessor: 'receivingDate' },
@@ -101,7 +101,7 @@ const ExpiryAlerts: React.FC = () => {
       header: 'Days Left', 
       accessor: 'daysLeft',
       cell: (row: ExpiryItem) => {
-        const daysLeft = getDaysUntilExpiry(row.expiryDate);
+        const daysLeft = row.daysLeft || getDaysUntilExpiry(row.expiryDate);
         const textClass = daysLeft < 0 ? 'text-red-600 font-medium' : 
                         daysLeft <= 7 ? 'text-orange-600 font-medium' : 
                         daysLeft <= 14 ? 'text-amber-600 font-medium' :
