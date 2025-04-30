@@ -657,7 +657,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Getting monthly expiry data for systemType:", systemType);
       const data = await storage.getMonthlyExpiry(systemType);
       
       return res.status(200).json(data);
@@ -673,7 +674,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Getting weekly expiry data for systemType:", systemType);
       const data = await storage.getWeeklyExpiry(systemType);
       
       return res.status(200).json(data);
@@ -690,10 +692,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Getting overview data for systemType:", systemType);
       const search = req.query.search as string;
       
       let items = await storage.getOverviewItems(systemType);
+      console.log("Found", items.length, "overview items");
       
       // Filter by search term if provided
       if (search) {
@@ -701,6 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           item.upc.includes(search) || 
           item.description.toLowerCase().includes(search.toLowerCase())
         );
+        console.log("After search filter:", items.length, "items remain");
       }
       
       return res.status(200).json(items);
@@ -716,8 +721,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Clearing data for systemType:", systemType);
       const success = await storage.clearData(systemType);
+      
+      // Log the action
+      await storage.createActivity({
+        systemType,
+        type: 'warning',
+        title: `Data cleared for ${systemType}`,
+        description: 'All data was cleared for this system',
+        category: 'system'
+      });
       
       return res.status(200).json({ 
         success,
@@ -736,8 +751,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Getting stock deductions for systemType:", systemType);
       const deductions = await storage.getStockDeductions(systemType);
+      console.log("Found", deductions.length, "stock deductions");
       
       return res.status(200).json(deductions);
     } catch (error) {
@@ -752,19 +769,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
       const { upc, quantity } = req.body;
       
+      console.log("Deducting stock for systemType:", systemType, "UPC:", upc, "Quantity:", quantity);
+      
       if (!upc || !quantity || quantity <= 0) {
+        console.error("Invalid deduction data:", { upc, quantity });
         return res.status(400).json({ message: "Invalid deduction data" });
       }
       
       const success = await storage.deductStockWithFEFO(upc, quantity, systemType);
       
       if (!success) {
+        console.error("Failed to deduct stock. Insufficient inventory for UPC:", upc);
         return res.status(400).json({ message: "Failed to deduct stock. Insufficient inventory." });
       }
       
+      console.log("Stock deducted successfully");
       return res.status(200).json({ 
         success: true,
         message: "Stock deducted successfully" 

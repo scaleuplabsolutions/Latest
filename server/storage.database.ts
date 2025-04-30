@@ -369,7 +369,6 @@ export class DatabaseStorage implements IStorage {
     }
     
     let remainingToDeduct = quantity;
-    const deductionDate = new Date();
     
     // Loop through container items in FEFO order (already sorted by expiry date)
     for (const item of containerItemsForUPC) {
@@ -395,7 +394,6 @@ export class DatabaseStorage implements IStorage {
         batchNumber: item.batchNumber,
         expiryDate: item.expiryDate,
         qtyDeducted: deductFromThisItem,
-        deductionDate,
         fefoApplied: true
       });
       
@@ -405,8 +403,7 @@ export class DatabaseStorage implements IStorage {
         type: 'stock-deduction',
         title: `Stock Deduction: ${deductFromThisItem} units of ${item.description}`,
         description: `Deducted ${deductFromThisItem} units of ${item.description} (UPC: ${upc}, Batch: ${item.batchNumber})`,
-        category: 'inventory',
-        timestamp: deductionDate
+        category: 'inventory'
       });
       
       remainingToDeduct -= deductFromThisItem;
@@ -691,7 +688,7 @@ export class DatabaseStorage implements IStorage {
         type: 'system',
         title: 'Data Clear',
         description: 'All data has been cleared from the system',
-        timestamp: new Date()
+        category: 'admin'
       });
       
       return true;
