@@ -353,19 +353,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const insertedItems = await storage.createManyInventoryItems(items);
+      // Process in batches to avoid call stack limits
+      const BATCH_SIZE = 100;
+      let insertedCount = 0;
+      
+      console.log(`Processing ${items.length} items in batches of ${BATCH_SIZE}`);
+      
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const batch = items.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(items.length/BATCH_SIZE)}, size: ${batch.length}`);
+        
+        try {
+          const insertedBatch = await storage.createManyInventoryItems(batch);
+          insertedCount += insertedBatch.length;
+        } catch (error) {
+          console.error(`Error processing batch ${Math.floor(i/BATCH_SIZE) + 1}:`, error);
+        }
+      }
       
       // Create activity
       await storage.createActivity({
         type: "success",
-        title: `${insertedItems.length} inventory items imported`,
-        description: `Inventory data was successfully uploaded`,
+        title: `${insertedCount} inventory items imported`,
+        description: `Inventory data was successfully uploaded in batches`,
         systemType
       });
       
       return res.status(200).json({ 
         message: "Inventory imported successfully",
-        count: insertedItems.length,
+        count: insertedCount,
         skippedRows: skippedRows.length
       });
     } catch (error) {
@@ -516,19 +532,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const insertedItems = await storage.createManyContainerItems(items);
+      // Process in batches to avoid call stack limits
+      const BATCH_SIZE = 100;
+      let insertedCount = 0;
+      
+      console.log(`Processing ${items.length} container items in batches of ${BATCH_SIZE}`);
+      
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const batch = items.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(items.length/BATCH_SIZE)}, size: ${batch.length}`);
+        
+        try {
+          const insertedBatch = await storage.createManyContainerItems(batch);
+          insertedCount += insertedBatch.length;
+        } catch (error) {
+          console.error(`Error processing batch ${Math.floor(i/BATCH_SIZE) + 1}:`, error);
+        }
+      }
       
       // Create activity
       await storage.createActivity({
         type: "success",
-        title: `${insertedItems.length} container items imported`,
-        description: `Container ${items[0].container} data was successfully uploaded`,
+        title: `${insertedCount} container items imported`,
+        description: `Container data was successfully uploaded in batches`,
         systemType
       });
       
       return res.status(200).json({ 
         message: "Container data imported successfully",
-        count: insertedItems.length
+        count: insertedCount
       });
     } catch (error) {
       console.error("Container upload error:", error);
