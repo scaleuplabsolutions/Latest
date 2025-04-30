@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import * as XLSX from 'xlsx';
 import { z } from "zod";
+import { setupAuth } from "./auth";
 import { insertActivitySchema, insertContainerItemSchema, insertInventoryItemSchema, insertUserSchema } from "@shared/schema";
 
 // Add session type to Request object
@@ -40,7 +41,10 @@ function getExpiryStatus(daysUntilExpiry: number): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth routes
+  // Set up authentication
+  setupAuth(app);
+  
+  // Auth routes - These will be handled by setupAuth, but kept here for reference
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const { username, password, systemType } = req.body;
