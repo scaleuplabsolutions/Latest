@@ -19,7 +19,14 @@ import {
 
 // modify the interface with any CRUD methods
 // you might need
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+
 export interface IStorage {
+  // Session store for authentication
+  sessionStore: session.Store;
+  
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -71,12 +78,20 @@ export interface IStorage {
   clearData(systemType: string): Promise<boolean>;
 }
 
+// Import memory store for session management
+import createMemoryStore from "memorystore";
+
+const MemoryStore = createMemoryStore(session);
+
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private inventoryItems: Map<number, InventoryItem>;
   private containerItems: Map<number, ContainerItem>;
   private stockDeductions: Map<number, StockDeduction>;
   private activities: Map<number, Activity>;
+  
+  // Session store for auth
+  public sessionStore: session.Store;
   
   // IDs for auto-increment
   private userId: number;
@@ -86,6 +101,11 @@ export class MemStorage implements IStorage {
   private activityId: number;
 
   constructor() {
+    // Initialize session store
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
+    
     this.users = new Map();
     this.inventoryItems = new Map();
     this.containerItems = new Map();

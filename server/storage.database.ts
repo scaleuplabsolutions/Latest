@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and, desc, sql, like, or, isNull, not, gt, lt, lte, gte, asc } from "drizzle-orm";
 import { 
   users,
@@ -19,8 +19,22 @@ import {
   ExpiryStatus
 } from "@shared/schema";
 import { IStorage } from "./storage";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+
+const PostgresSessionStore = connectPg(session);
 
 export class DatabaseStorage implements IStorage {
+  // Session store for authentication
+  public sessionStore: session.Store;
+  
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true,
+      tableName: 'session' 
+    });
+  }
   // User methods
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
