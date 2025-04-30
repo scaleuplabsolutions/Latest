@@ -12,7 +12,12 @@ declare module 'express-session' {
     username?: string;
     systemType?: string;
   }
-};
+}
+
+// Helper function to ensure systemType is a string
+function ensureSystemType(systemType: string | undefined): string {
+  return systemType || 'store';
+}
 
 // Helper function to calculate days until expiry
 function getDaysUntilExpiry(expiryDate: string): number {
@@ -138,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
       const stats = await storage.getDashboardStats(systemType);
       
       return res.status(200).json(stats);
@@ -154,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const activities = await storage.getActivities(systemType, limit);
       
@@ -172,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
       const items = await storage.getInventoryItems(systemType);
       
       return res.status(200).json(items);
