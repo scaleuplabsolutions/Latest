@@ -14,6 +14,7 @@ const Auth: React.FC = () => {
   const { login, loading } = useAuth();
 
   const handleSelectSystemType = (type: 'store' | 'warehouse') => {
+    console.log('Selected system type:', type);
     setSystemType(type);
   };
 
@@ -47,7 +48,10 @@ const Auth: React.FC = () => {
           <div className="mt-8">
             <RadioGroup 
               value={systemType || ''} 
-              onValueChange={(value) => handleSelectSystemType(value as 'store' | 'warehouse')}
+              onValueChange={(value) => {
+                console.log('RadioGroup onValueChange called with:', value);
+                handleSelectSystemType(value as 'store' | 'warehouse');
+              }}
               className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4"
             >
               <div className={`relative flex-1 flex justify-center py-8 px-4 border border-transparent rounded-md ${
@@ -59,10 +63,8 @@ const Auth: React.FC = () => {
                   htmlFor="store"
                   className="relative flex justify-center items-center cursor-pointer"
                 >
-                  <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                    <Store className="h-5 w-5" />
-                  </span>
                   <RadioGroupItem value="store" id="store" className="sr-only" />
+                  <Store className="mr-2 h-5 w-5" />
                   <span className="font-medium text-sm">Store System</span>
                 </Label>
               </div>
@@ -76,10 +78,8 @@ const Auth: React.FC = () => {
                   htmlFor="warehouse"
                   className="relative flex justify-center items-center cursor-pointer"
                 >
-                  <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                    <Warehouse className="h-5 w-5" />
-                  </span>
                   <RadioGroupItem value="warehouse" id="warehouse" className="sr-only" />
+                  <Warehouse className="mr-2 h-5 w-5" />
                   <span className="font-medium text-sm">Warehouse System</span>
                 </Label>
               </div>
