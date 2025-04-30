@@ -13,13 +13,15 @@ import { useToast } from '@/hooks/use-toast';
 
 interface OverviewItem {
   upc: string;
-  description?: string;
+  description: string;
   shelfExpiryEstimate: string;
   totalStock: number;
   dailyStock: number;
   sales: string;
   batchNumbers: string;
   status: string;
+  daysLeft?: number;
+  salesTrend?: 'increasing' | 'decreasing' | 'stable';
 }
 
 const Overview: React.FC = () => {
@@ -87,11 +89,77 @@ const Overview: React.FC = () => {
   const columns = [
     { header: 'UPC', accessor: 'upc' },
     { header: 'Description', accessor: 'description' },
-    { header: 'Shelf Expiry Estimate', accessor: 'shelfExpiryEstimate' },
-    { header: 'Total Stock', accessor: 'totalStock' },
-    { header: 'Daily Stock', accessor: 'dailyStock' },
-    { header: 'Sales', accessor: 'sales' },
-    { header: 'Batch Numbers', accessor: 'batchNumbers' },
+    { 
+      header: 'Shelf Expiry', 
+      accessor: 'shelfExpiryEstimate',
+      cell: (row: OverviewItem) => {
+        const date = new Date(row.shelfExpiryEstimate).toLocaleDateString();
+        return <span>{date}</span>;
+      }
+    },
+    { 
+      header: 'Days Left', 
+      accessor: 'daysLeft',
+      cell: (row: OverviewItem) => {
+        const daysLeft = row.daysLeft || 0;
+        const textClass = daysLeft < 0 ? 'text-red-600 font-medium' : 
+                        daysLeft <= 7 ? 'text-orange-600 font-medium' : 
+                        daysLeft <= 14 ? 'text-amber-600 font-medium' :
+                        'text-neutral-900';
+        return <span className={textClass}>{daysLeft}</span>;
+      }
+    },
+    { 
+      header: 'Total Stock', 
+      accessor: 'totalStock',
+      cell: (row: OverviewItem) => (
+        <span className="font-medium">{row.totalStock}</span>
+      )
+    },
+    { 
+      header: 'Daily Stock', 
+      accessor: 'dailyStock',
+      cell: (row: OverviewItem) => (
+        <span>{row.dailyStock}</span>
+      )
+    },
+    { 
+      header: 'Sales', 
+      accessor: 'sales',
+      cell: (row: OverviewItem) => {
+        const trend = row.salesTrend;
+        const trendIcon = trend === 'increasing' ? '↑' : 
+                        trend === 'decreasing' ? '↓' : 
+                        trend === 'stable' ? '→' : '';
+        const trendClass = trend === 'increasing' ? 'text-green-600' : 
+                        trend === 'decreasing' ? 'text-red-600' : 
+                        'text-neutral-500';
+        
+        return (
+          <div className="flex items-center">
+            <span>{row.sales}</span>
+            {trend && (
+              <span className={`ml-2 ${trendClass}`}>{trendIcon}</span>
+            )}
+          </div>
+        );
+      }
+    },
+    { 
+      header: 'Batch Numbers', 
+      accessor: 'batchNumbers',
+      cell: (row: OverviewItem) => {
+        const batches = row.batchNumbers.split(', ');
+        return (
+          <span className="text-xs">
+            {batches.length > 2 
+              ? `${batches.slice(0, 2).join(', ')} +${batches.length - 2} more`
+              : row.batchNumbers
+            }
+          </span>
+        );
+      }
+    },
     { 
       header: 'Status', 
       accessor: 'status',
