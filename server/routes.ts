@@ -5,6 +5,15 @@ import * as XLSX from 'xlsx';
 import { z } from "zod";
 import { insertActivitySchema, insertContainerItemSchema, insertInventoryItemSchema, insertUserSchema } from "@shared/schema";
 
+// Add session type to Request object
+declare module 'express-session' {
+  interface SessionData {
+    userId?: number;
+    username?: string;
+    systemType?: string;
+  }
+};
+
 // Helper function to calculate days until expiry
 function getDaysUntilExpiry(expiryDate: string): number {
   const expiry = new Date(expiryDate);
@@ -42,11 +51,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate session data
-      req.session = {
-        userId: user.id,
-        username: user.username,
-        systemType
-      };
+      if (req.session) {
+        req.session.userId = user.id;
+        req.session.username = user.username;
+        req.session.systemType = systemType;
+      }
       
       return res.status(200).json({
         id: user.id,
@@ -109,8 +118,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.session = null;
-    return res.status(200).json({ message: "Logged out successfully" });
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return res.status(500).json({ message: "Failed to logout" });
+        }
+        return res.status(200).json({ message: "Logged out successfully" });
+      });
+    } else {
+      return res.status(200).json({ message: "Logged out successfully" });
+    }
   });
   
   // Dashboard routes

@@ -150,10 +150,6 @@ const Auth: React.FC = () => {
               </div>
               
               <div>
-                {/* Fix the console log error */}
-                {React.useEffect(() => {
-                  console.log('Button disabled state (effect):', !systemType || loading, 'systemType:', systemType);
-                }, [systemType, loading])}
                 <Button
                   type="submit"
                   className="group relative w-full"
