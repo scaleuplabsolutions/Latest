@@ -193,50 +193,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
       const data = req.body.data;
+      
+      console.log("Inventory upload received data:", JSON.stringify(data).slice(0, 200) + "...");
       
       if (!data || !Array.isArray(data)) {
         return res.status(400).json({ message: "Invalid data format" });
       }
       
       const items: any[] = [];
+      const skippedRows: any[] = [];
       
       for (const row of data) {
-        // Convert all keys to lowercase
-        const normalizedRow: any = {};
-        Object.keys(row).forEach(key => {
-          normalizedRow[key.toLowerCase()] = row[key];
-        });
-        
-        // Required fields
-        const upc = normalizedRow.upc?.toString() || "";
-        const description = normalizedRow.description?.toString() || "";
-        
-        if (!upc || !description) {
-          continue; // Skip invalid rows
+        try {
+          // Convert all keys to lowercase
+          const normalizedRow: any = {};
+          Object.keys(row).forEach(key => {
+            normalizedRow[key.toLowerCase()] = row[key];
+          });
+          
+          // Required fields with more lenient extraction
+          let upc = "";
+          if (normalizedRow.upc !== undefined) upc = String(normalizedRow.upc || "");
+          if (normalizedRow.sku !== undefined && !upc) upc = String(normalizedRow.sku || "");
+          if (normalizedRow.product_code !== undefined && !upc) upc = String(normalizedRow.product_code || "");
+          if (normalizedRow.barcode !== undefined && !upc) upc = String(normalizedRow.barcode || "");
+          
+          let description = "";
+          if (normalizedRow.description !== undefined) description = String(normalizedRow.description || "");
+          if (normalizedRow.product_name !== undefined && !description) description = String(normalizedRow.product_name || "");
+          if (normalizedRow.name !== undefined && !description) description = String(normalizedRow.name || "");
+          if (normalizedRow.item !== undefined && !description) description = String(normalizedRow.item || "");
+          
+          // Check for critical data
+          if (!upc) {
+            skippedRows.push({ row, reason: "Missing UPC/SKU/Product Code" });
+            continue;
+          }
+          
+          if (!description) {
+            skippedRows.push({ row, reason: "Missing Description/Name" });
+            continue;
+          }
+          
+          items.push({
+            upc,
+            venCode: normalizedRow.ven_code?.toString() || 
+                     normalizedRow.vencode?.toString() || 
+                     normalizedRow.vendor_code?.toString() || "",
+            description,
+            size: normalizedRow.size?.toString() || 
+                  normalizedRow.package_size?.toString() || "",
+            wh2qty: parseInt(normalizedRow.wh2qty) || 
+                    parseInt(normalizedRow.warehouse_qty) || 
+                    parseInt(normalizedRow.wh_qty) || 0,
+            rvsbondqty: parseInt(normalizedRow.rvsbondqty) || 
+                        parseInt(normalizedRow.reserve_qty) || 0,
+            sdeptName: normalizedRow.sdeptname?.toString() || 
+                       normalizedRow.department?.toString() || 
+                       normalizedRow.category?.toString() || 
+                       normalizedRow.dept?.toString() || "",
+            vendorId: normalizedRow.vendor_id?.toString() || 
+                      normalizedRow.vendorid?.toString() || 
+                      normalizedRow.supplier_id?.toString() || "",
+            storeQty: parseInt(normalizedRow.storeqty) || 
+                      parseInt(normalizedRow.store_qty) || 
+                      parseInt(normalizedRow.qty) || 
+                      parseInt(normalizedRow.quantity) || 0,
+            hostQty: parseInt(normalizedRow.hostqty) || 
+                     parseInt(normalizedRow.host_qty) || 0,
+            cost: normalizedRow.cost?.toString() || 
+                  normalizedRow.unit_cost?.toString() || 
+                  normalizedRow.cost_price?.toString() || "",
+            price: normalizedRow.price?.toString() || 
+                   normalizedRow.retail_price?.toString() || 
+                   normalizedRow.selling_price?.toString() || "",
+            grossMargin: normalizedRow.gross_margin?.toString() || 
+                         normalizedRow.grossmargin?.toString() || 
+                         normalizedRow.margin?.toString() || "",
+            systemType
+          });
+        } catch (error) {
+          console.error("Error processing inventory row:", error, row);
+          skippedRows.push({ row, reason: "Processing error" });
         }
-        
-        items.push({
-          upc,
-          venCode: normalizedRow.ven_code?.toString() || normalizedRow.vencode?.toString() || "",
-          description,
-          size: normalizedRow.size?.toString() || "",
-          wh2qty: parseInt(normalizedRow.wh2qty) || 0,
-          rvsbondqty: parseInt(normalizedRow.rvsbondqty) || 0,
-          sdeptName: normalizedRow.sdeptname?.toString() || "",
-          vendorId: normalizedRow.vendor_id?.toString() || normalizedRow.vendorid?.toString() || "",
-          storeQty: parseInt(normalizedRow.storeqty) || 0,
-          hostQty: parseInt(normalizedRow.hostqty) || 0,
-          cost: normalizedRow.cost?.toString() || "",
-          price: normalizedRow.price?.toString() || "",
-          grossMargin: normalizedRow.gross_margin?.toString() || normalizedRow.grossmargin?.toString() || "",
-          systemType
-        });
       }
       
       if (items.length === 0) {
-        return res.status(400).json({ message: "No valid items found in data" });
+        return res.status(400).json({ 
+          message: "No valid items found in data", 
+          skippedRows: skippedRows.length,
+          skippedDetail: skippedRows.slice(0, 5)
+        });
       }
       
       const insertedItems = await storage.createManyInventoryItems(items);
@@ -251,7 +300,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(200).json({ 
         message: "Inventory imported successfully",
-        count: insertedItems.length
+        count: insertedItems.length,
+        skippedRows: skippedRows.length
       });
     } catch (error) {
       console.error("Inventory upload error:", error);
@@ -282,67 +332,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
       const data = req.body.data;
+      
+      console.log("Container upload received data:", JSON.stringify(data).slice(0, 200) + "...");
       
       if (!data || !Array.isArray(data)) {
         return res.status(400).json({ message: "Invalid data format" });
       }
       
       const items: any[] = [];
+      const skippedRows: any[] = [];
       
       for (const row of data) {
-        // Convert all keys to lowercase
-        const normalizedRow: any = {};
-        Object.keys(row).forEach(key => {
-          normalizedRow[key.toLowerCase()] = row[key];
-        });
-        
-        // Required fields
-        const upc = normalizedRow.upc?.toString() || "";
-        const description = normalizedRow.description?.toString() || "";
-        const container = normalizedRow.container?.toString() || "";
-        const receivingDate = normalizedRow.receiving_date?.toString() || 
+        try {
+          // Convert all keys to lowercase
+          const normalizedRow: any = {};
+          Object.keys(row).forEach(key => {
+            normalizedRow[key.toLowerCase()] = row[key];
+          });
+          
+          // Required fields with more lenient extraction
+          let upc = "";
+          if (normalizedRow.upc !== undefined) upc = String(normalizedRow.upc || "");
+          if (normalizedRow.sku !== undefined && !upc) upc = String(normalizedRow.sku || "");
+          if (normalizedRow.product_code !== undefined && !upc) upc = String(normalizedRow.product_code || "");
+          
+          let description = "";
+          if (normalizedRow.description !== undefined) description = String(normalizedRow.description || "");
+          if (normalizedRow.product_name !== undefined && !description) description = String(normalizedRow.product_name || "");
+          if (normalizedRow.name !== undefined && !description) description = String(normalizedRow.name || "");
+          
+          let container = "";
+          if (normalizedRow.container !== undefined) container = String(normalizedRow.container || "");
+          if (normalizedRow.container_id !== undefined && !container) container = String(normalizedRow.container_id || "");
+          if (normalizedRow.shipment !== undefined && !container) container = String(normalizedRow.shipment || "");
+          
+          const receivingDate = normalizedRow.receiving_date?.toString() || 
                               normalizedRow.receivingdate?.toString() || 
+                              normalizedRow.received_date?.toString() ||
+                              normalizedRow.date_received?.toString() ||
                               new Date().toISOString().split('T')[0];
-        const batchNumber = normalizedRow.batch_number?.toString() || 
+          
+          let batchNumber = normalizedRow.batch_number?.toString() || 
                             normalizedRow.batch?.toString() || 
                             normalizedRow["batch_#"]?.toString() || 
-                            normalizedRow["batch #"]?.toString() || 
-                            `BATCH-${Math.floor(Math.random() * 100000)}`;
-        const qtyReceived = parseInt(normalizedRow.qty_rec) || 
+                            normalizedRow["batch #"]?.toString();
+                            
+          // Generate batch if not provided
+          if (!batchNumber) {
+            batchNumber = `BATCH-${Math.floor(Math.random() * 100000)}`;
+          }
+          
+          const qtyReceived = parseInt(normalizedRow.qty_rec) || 
                             parseInt(normalizedRow.qtyrec) || 
-                            parseInt(normalizedRow.qty) || 0;
-        const expiryDate = normalizedRow.expiry_date?.toString() || 
+                            parseInt(normalizedRow.qty) || 
+                            parseInt(normalizedRow.quantity) || 0;
+          
+          let expiryDate = normalizedRow.expiry_date?.toString() || 
                           normalizedRow.expirydate?.toString() || 
-                          ""; // This should be required
-        
-        if (!upc || !description || !container || !expiryDate) {
-          continue; // Skip invalid rows
+                          normalizedRow.expiration_date?.toString() || 
+                          normalizedRow.exp_date?.toString() || "";
+                          
+          // If expiry date is not provided, default to 1 year from now
+          if (!expiryDate) {
+            const oneYearFromNow = new Date();
+            oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+            expiryDate = oneYearFromNow.toISOString().split('T')[0];
+          }
+          
+          // Check if we have critical data
+          if (!upc) {
+            skippedRows.push({ row, reason: "Missing UPC/SKU" });
+            continue;
+          }
+          
+          if (!description) {
+            skippedRows.push({ row, reason: "Missing description" });
+            continue;
+          }
+          
+          if (!container) {
+            // Generate container ID if not provided
+            container = `CONT-${Math.floor(Math.random() * 100000)}`;
+          }
+          
+          // Calculate status based on expiry date
+          const daysUntilExpiry = getDaysUntilExpiry(expiryDate);
+          const status = getExpiryStatus(daysUntilExpiry);
+          
+          items.push({
+            container,
+            supplier: normalizedRow.supplier?.toString() || "",
+            upc,
+            description,
+            itemNumber: normalizedRow["item_#"]?.toString() || normalizedRow["item #"]?.toString() || normalizedRow.item_number?.toString() || "",
+            receivingDate,
+            batchNumber,
+            qtyReceived,
+            remainingQty: qtyReceived,
+            expiryDate,
+            status,
+            systemType
+          });
+        } catch (error) {
+          console.error("Error processing row:", error, row);
+          skippedRows.push({ row, reason: "Processing error" });
         }
-        
-        // Calculate status based on expiry date
-        const daysUntilExpiry = getDaysUntilExpiry(expiryDate);
-        const status = getExpiryStatus(daysUntilExpiry);
-        
-        items.push({
-          container,
-          supplier: normalizedRow.supplier?.toString() || "",
-          upc,
-          description,
-          itemNumber: normalizedRow["item_#"]?.toString() || normalizedRow["item #"]?.toString() || "",
-          receivingDate,
-          batchNumber,
-          qtyReceived,
-          remainingQty: qtyReceived,
-          expiryDate,
-          status,
-          systemType
-        });
       }
       
       if (items.length === 0) {
-        return res.status(400).json({ message: "No valid items found in data" });
+        return res.status(400).json({ 
+          message: "No valid items found in data", 
+          skippedRows: skippedRows.length, 
+          skippedDetail: skippedRows.slice(0, 5) 
+        });
       }
       
       const insertedItems = await storage.createManyContainerItems(items);
