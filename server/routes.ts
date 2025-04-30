@@ -353,15 +353,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Process in batches to avoid call stack limits
-      const BATCH_SIZE = 100;
+      // Process in much smaller batches to avoid call stack limits
+      const BATCH_SIZE = 25; // Reduce batch size further
       let insertedCount = 0;
       
       console.log(`Processing ${items.length} items in batches of ${BATCH_SIZE}`);
       
-      for (let i = 0; i < items.length; i += BATCH_SIZE) {
-        const batch = items.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(items.length/BATCH_SIZE)}, size: ${batch.length}`);
+      // Limit to a reasonable number to prevent database overload
+      const MAX_ITEMS = 2000;
+      const itemsToProcess = items.slice(0, MAX_ITEMS);
+      if (items.length > MAX_ITEMS) {
+        console.log(`Limiting processing to ${MAX_ITEMS} of ${items.length} items to prevent overload`);
+      }
+      
+      for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
+        const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(itemsToProcess.length/BATCH_SIZE)}, size: ${batch.length}`);
+        
+        // Add additional delay between batches to prevent overload
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
         
         try {
           const insertedBatch = await storage.createManyInventoryItems(batch);
@@ -532,15 +544,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Process in batches to avoid call stack limits
-      const BATCH_SIZE = 100;
+      // Process in much smaller batches to avoid call stack limits
+      const BATCH_SIZE = 25; // Reduce batch size for containers too
       let insertedCount = 0;
       
       console.log(`Processing ${items.length} container items in batches of ${BATCH_SIZE}`);
       
-      for (let i = 0; i < items.length; i += BATCH_SIZE) {
-        const batch = items.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(items.length/BATCH_SIZE)}, size: ${batch.length}`);
+      // Limit to a reasonable number to prevent database overload
+      const MAX_ITEMS = 2000;
+      const itemsToProcess = items.slice(0, MAX_ITEMS);
+      if (items.length > MAX_ITEMS) {
+        console.log(`Limiting processing to ${MAX_ITEMS} of ${items.length} items to prevent overload`);
+      }
+      
+      for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
+        const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(itemsToProcess.length/BATCH_SIZE)}, size: ${batch.length}`);
+        
+        // Add additional delay between batches to prevent overload
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
         
         try {
           const insertedBatch = await storage.createManyContainerItems(batch);
