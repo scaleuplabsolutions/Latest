@@ -224,70 +224,44 @@ export class DatabaseStorage implements IStorage {
   async getExpiryItems(systemType: string, status?: ExpiryStatus): Promise<ContainerItem[]> {
     console.log("DatabaseStorage.getExpiryItems called with systemType:", systemType, "status:", status || "all");
     
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    
-    // Initialize base query
-    let baseCondition = and(
-      eq(containerItems.systemType, systemType),
-      gt(containerItems.remainingQty, 0)
-    );
-    
-    // Add status filtering
-    if (status) {
-      if (status === 'expired') {
-        // Expired: Earlier than today
-        baseCondition = and(
-          baseCondition,
-          lt(containerItems.expiryDate, todayStr)
-        );
-      } else if (status === 'short-dated') {
-        // Short-dated: Between today and 7 days from now
-        const shortDatedDate = new Date(today);
-        shortDatedDate.setDate(today.getDate() + 7);
-        const shortDatedStr = shortDatedDate.toISOString().split('T')[0];
-        
-        baseCondition = and(
-          baseCondition,
-          gte(containerItems.expiryDate, todayStr),
-          lte(containerItems.expiryDate, shortDatedStr)
-        );
-      } else if (status === 'expiring-soon') {
-        // Expiring soon: Between 8 and 14 days from now
-        const shortDatedDate = new Date(today);
-        shortDatedDate.setDate(today.getDate() + 7);
-        const shortDatedStr = shortDatedDate.toISOString().split('T')[0];
-        
-        const expiringSoonDate = new Date(today);
-        expiringSoonDate.setDate(today.getDate() + 14);
-        const expiringSoonStr = expiringSoonDate.toISOString().split('T')[0];
-        
-        baseCondition = and(
-          baseCondition,
-          gt(containerItems.expiryDate, shortDatedStr),
-          lte(containerItems.expiryDate, expiringSoonStr)
-        );
-      } else if (status === 'good') {
-        // Good: More than 14 days from now
-        const expiringSoonDate = new Date(today);
-        expiringSoonDate.setDate(today.getDate() + 14);
-        const expiringSoonStr = expiringSoonDate.toISOString().split('T')[0];
-        
-        baseCondition = and(
-          baseCondition,
-          gt(containerItems.expiryDate, expiringSoonStr)
-        );
-      }
-    }
-    
-    // Execute the query with our condition
-    const items = await db
+    // Basic check for items with a non-zero remaining quantity for this system
+    let query = db
       .select()
       .from(containerItems)
-      .where(baseCondition)
+      .where(and(
+        eq(containerItems.systemType, systemType),
+        gt(containerItems.remainingQty, 0)
+      ))
       .orderBy(asc(containerItems.expiryDate));
-      
+    
+    const items = await query;
     console.log("DatabaseStorage.getExpiryItems found", items.length, "items");
+    
+    // If status filtering is required, do it in-memory since date comparisons 
+    // can be tricky with different date formats
+    if (status && items.length > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      return items.filter(item => {
+        const expiryDate = new Date(item.expiryDate);
+        expiryDate.setHours(0, 0, 0, 0);
+        
+        const daysDiff = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (status === 'expired' && daysDiff < 0) {
+          return true;
+        } else if (status === 'short-dated' && daysDiff >= 0 && daysDiff <= 7) {
+          return true;
+        } else if (status === 'expiring-soon' && daysDiff > 7 && daysDiff <= 14) {
+          return true;
+        } else if (status === 'good' && daysDiff > 14) {
+          return true;
+        }
+        
+        return false;
+      });
+    }
     
     return items;
   }
