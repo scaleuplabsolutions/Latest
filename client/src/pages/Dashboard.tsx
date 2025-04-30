@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSystemType } from '@/hooks/useSystemType';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { CalendarClock, AlertCircle, CheckCircle, Package, Clock } from 'lucide-react';
+import { CalendarClock, AlertCircle, CheckCircle, Package, Clock, Calendar } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface DashboardStats {
   expired: number;
@@ -23,6 +24,12 @@ interface Activity {
   timestamp: string;
 }
 
+interface ExpiryChartData {
+  date: string;
+  quantity: number;
+  products: number;
+}
+
 const Dashboard: React.FC = () => {
   const { getSystemName } = useSystemType();
   
@@ -32,6 +39,10 @@ const Dashboard: React.FC = () => {
   
   const { data: activities, isLoading: activitiesLoading } = useQuery<Activity[]>({
     queryKey: ['/api/dashboard/activities']
+  });
+  
+  const { data: expiryChartData, isLoading: chartLoading } = useQuery<ExpiryChartData[]>({
+    queryKey: ['/api/dashboard/expiry-chart']
   });
 
   const getActivityIcon = (type: string) => {
@@ -80,6 +91,37 @@ const Dashboard: React.FC = () => {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  // Filter out chart data with zero quantities for better visualization
+  const filteredChartData = expiryChartData?.filter(item => item.quantity > 0) || [];
+  
+  // Group nearby dates for cleaner visualization if we have too much data
+  const groupedChartData = filteredChartData.length > 15
+    ? filteredChartData.reduce((acc: ExpiryChartData[], item, index) => {
+        if (index % 2 === 0) {
+          // For even indexes, create a new group
+          acc.push({
+            date: formatDate(item.date),
+            quantity: item.quantity,
+            products: item.products
+          });
+        } else {
+          // For odd indexes, add to the previous group
+          const lastItem = acc[acc.length - 1];
+          lastItem.quantity += item.quantity;
+          lastItem.products += item.products;
+        }
+        return acc;
+      }, [])
+    : filteredChartData.map(item => ({
+        ...item,
+        date: formatDate(item.date)
+      }));
 
   return (
     <div>

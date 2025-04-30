@@ -170,6 +170,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get("/api/dashboard/expiry-chart", async (req: Request, res: Response) => {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const systemType = ensureSystemType(req.session.systemType);
+      
+      // Get all container items that are active (have remaining quantity)
+      const items = await storage.getContainerItems(systemType);
+      const activeItems = items.filter(item => (item.remainingQty || 0) > 0);
+      
+      // Group by expiry date and sum quantities
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Get the next 30 days
+      const next30Days = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      });
+      
+      // Initialize result with all 30 days and zero quantities
+      const result = next30Days.map(date => ({
+        date,
+        quantity: 0,
+        products: 0
+      }));
+      
+      // Add quantities from active items
+      activeItems.forEach(item => {
+        const expiryDate = item.expiryDate.split('T')[0]; // Ensure YYYY-MM-DD format
+        const dayIndex = next30Days.indexOf(expiryDate);
+        
+        if (dayIndex !== -1) {
+          result[dayIndex].quantity += item.remainingQty || 0;
+          result[dayIndex].products += 1;
+        }
+      });
+      
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Dashboard expiry chart error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Inventory routes
   app.get("/api/inventory", async (req: Request, res: Response) => {
     if (!req.session || !req.session.userId) {
