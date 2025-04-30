@@ -8,10 +8,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Warehouse, Store } from 'lucide-react';
 
 const Auth: React.FC = () => {
-  const [systemType, setSystemType] = useState<'store' | 'warehouse' | null>(null);
+  const [systemType, setSystemType] = useState<'store' | 'warehouse' | null>('store');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { login, loading } = useAuth();
+  
+  // Add log to debug button state
+  React.useEffect(() => {
+    console.log('Button disabled state (effect):', !systemType || loading, 'systemType:', systemType);
+  }, [systemType, loading]);
 
   const handleSelectSystemType = (type: 'store' | 'warehouse') => {
     console.log('Selected system type:', type);
@@ -54,11 +59,18 @@ const Auth: React.FC = () => {
               }}
               className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4"
             >
-              <div className={`relative flex-1 flex justify-center py-8 px-4 border border-transparent rounded-md ${
-                systemType === 'store' 
-                  ? 'bg-primary text-white' 
-                  : 'bg-neutral-100 text-neutral-700'
-              } hover:bg-primary/80 hover:text-white transition-colors cursor-pointer`}>
+              <div 
+                className={`relative flex-1 flex justify-center py-8 px-4 border border-transparent rounded-md ${
+                  systemType === 'store' 
+                    ? 'bg-primary text-white' 
+                    : 'bg-neutral-100 text-neutral-700'
+                } hover:bg-primary/80 hover:text-white transition-colors cursor-pointer`}
+                onClick={() => {
+                  console.log('Store clicked');
+                  setSystemType('store');
+                  console.log('SystemType after setting:', 'store');
+                }}
+              >
                 <Label
                   htmlFor="store"
                   className="relative flex justify-center items-center cursor-pointer"
@@ -69,11 +81,18 @@ const Auth: React.FC = () => {
                 </Label>
               </div>
               
-              <div className={`relative flex-1 flex justify-center py-8 px-4 border border-transparent rounded-md ${
-                systemType === 'warehouse' 
-                  ? 'bg-secondary text-white' 
-                  : 'bg-neutral-100 text-neutral-700'
-              } hover:bg-secondary/80 hover:text-white transition-colors cursor-pointer`}>
+              <div 
+                className={`relative flex-1 flex justify-center py-8 px-4 border border-transparent rounded-md ${
+                  systemType === 'warehouse' 
+                    ? 'bg-secondary text-white' 
+                    : 'bg-neutral-100 text-neutral-700'
+                } hover:bg-secondary/80 hover:text-white transition-colors cursor-pointer`}
+                onClick={() => {
+                  console.log('Warehouse clicked');
+                  setSystemType('warehouse');
+                  console.log('SystemType after setting:', 'warehouse');
+                }}
+              >
                 <Label
                   htmlFor="warehouse"
                   className="relative flex justify-center items-center cursor-pointer"
@@ -131,10 +150,14 @@ const Auth: React.FC = () => {
               </div>
               
               <div>
+                {/* Fix the console log error */}
+                {React.useEffect(() => {
+                  console.log('Button disabled state (effect):', !systemType || loading, 'systemType:', systemType);
+                }, [systemType, loading])}
                 <Button
                   type="submit"
                   className="group relative w-full"
-                  disabled={!systemType || loading}
+                  disabled={loading}
                 >
                   {loading ? 'Signing in...' : 'Sign in'}
                 </Button>
