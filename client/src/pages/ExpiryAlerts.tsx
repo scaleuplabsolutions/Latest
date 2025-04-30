@@ -30,8 +30,8 @@ const ExpiryAlerts: React.FC = () => {
   const { toast } = useToast();
   
   // Parse query parameters from URL
-  const params = new URLSearchParams(location.split('?')[1] || '');
-  const initialStatus = (params.get('status') as ExpiryStatus) || 'all';
+  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const initialStatus = ((urlParams.get('status') as ExpiryStatus) || 'all');
   
   const [status, setStatus] = useState<ExpiryStatus>(initialStatus);
   const [category, setCategory] = useState<string>('');
@@ -41,11 +41,11 @@ const ExpiryAlerts: React.FC = () => {
   const { data: expiryItems, isLoading } = useQuery<ExpiryItem[]>({
     queryKey: ['/api/expiry-alerts', { status, category, search: searchTerm }],
     queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
+      const [url, queryParams] = queryKey as [string, { status: string, category: string, search: string }];
       const searchParams = new URLSearchParams();
-      if (params.status && params.status !== 'all') searchParams.append('status', params.status as string);
-      if (params.category) searchParams.append('category', params.category as string);
-      if (params.search) searchParams.append('search', params.search as string);
+      if (queryParams.status && queryParams.status !== 'all') searchParams.append('status', queryParams.status);
+      if (queryParams.category) searchParams.append('category', queryParams.category);
+      if (queryParams.search) searchParams.append('search', queryParams.search);
       
       const queryString = searchParams.toString();
       const response = await fetch(`${url}${queryString ? `?${queryString}` : ''}`);
@@ -69,10 +69,13 @@ const ExpiryAlerts: React.FC = () => {
     setStatus(newStatus);
     toast({
       title: `Showing ${newStatus === 'all' ? 'all items' : newStatus + ' items'}`,
-      description: `Filtered by status: ${newStatus === 'all' ? 'All Expiry Dates' : 
-                    newStatus === 'expiring-soon' ? 'Expiring Soon' :
-                    newStatus === 'expired' ? 'Expired Products' : 
-                    newStatus === 'good' ? 'Good Products' : 'Short-dated Products'}`,
+      description: `Filtered by status: ${
+        newStatus === 'all' ? 'All Expiry Dates' : 
+        newStatus === 'expired' ? 'Expired Products (past expiry date)' : 
+        newStatus === 'short-dated' ? 'Short-dated Products (0-7 days)' :
+        newStatus === 'expiring-soon' ? 'Expiring Soon Products (8-14 days)' : 
+        'Good Products (15+ days)'
+      }`,
     });
   };
 
@@ -134,20 +137,28 @@ const ExpiryAlerts: React.FC = () => {
                 All Expiry Dates
               </Button>
               <Button
-                variant={status === 'expiring-soon' ? 'default' : 'outline'}
-                size="sm"
-                className={status === 'expiring-soon' ? '' : 'text-amber-600 hover:text-amber-700'}
-                onClick={() => handleStatusChange('expiring-soon')}
-              >
-                Expiring Soon
-              </Button>
-              <Button
                 variant={status === 'expired' ? 'default' : 'outline'}
                 size="sm"
                 className={status === 'expired' ? '' : 'text-red-600 hover:text-red-700'}
                 onClick={() => handleStatusChange('expired')}
               >
-                Expired Products
+                Expired
+              </Button>
+              <Button
+                variant={status === 'short-dated' ? 'default' : 'outline'}
+                size="sm"
+                className={status === 'short-dated' ? '' : 'text-orange-600 hover:text-orange-700'}
+                onClick={() => handleStatusChange('short-dated')}
+              >
+                Short-dated (0-7 days)
+              </Button>
+              <Button
+                variant={status === 'expiring-soon' ? 'default' : 'outline'}
+                size="sm"
+                className={status === 'expiring-soon' ? '' : 'text-amber-600 hover:text-amber-700'}
+                onClick={() => handleStatusChange('expiring-soon')}
+              >
+                Expiring Soon (8-14 days)
               </Button>
               <Button
                 variant={status === 'good' ? 'default' : 'outline'}
@@ -155,7 +166,7 @@ const ExpiryAlerts: React.FC = () => {
                 className={status === 'good' ? '' : 'text-green-600 hover:text-green-700'}
                 onClick={() => handleStatusChange('good')}
               >
-                Good Products
+                Good
               </Button>
             </div>
             
