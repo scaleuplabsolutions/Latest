@@ -17,7 +17,17 @@ declare module 'express-session' {
 
 // Helper function to ensure systemType is a string
 function ensureSystemType(systemType: string | undefined): string {
-  return systemType || 'store';
+  if (!systemType) {
+    console.log("WARNING: systemType is undefined, defaulting to 'store'");
+    return 'store';
+  }
+  
+  if (systemType !== 'store' && systemType !== 'warehouse') {
+    console.log(`WARNING: Invalid systemType '${systemType}', defaulting to 'store'`);
+    return 'store';
+  }
+  
+  return systemType;
 }
 
 // Helper function to calculate days until expiry
@@ -258,6 +268,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items: any[] = [];
       const skippedRows: any[] = [];
       
+      console.log("Processing inventory rows:", data.length);
+      
       for (const row of data) {
         try {
           // Convert all keys to lowercase
@@ -369,8 +381,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Getting containers for systemType:", systemType);
       const items = await storage.getContainerItems(systemType);
+      console.log("Found", items.length, "container items");
       
       return res.status(200).json(items);
     } catch (error) {
@@ -597,8 +611,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Getting expiry status stats for systemType:", systemType);
       const stats = await storage.getDashboardStats(systemType);
+      
+      console.log("Expiry status stats:", {
+        goodStatus: stats.goodStatus,
+        expiringSoon: stats.expiringSoon,
+        expired: stats.expired,
+        shortDated: stats.shortDated
+      });
       
       return res.status(200).json([
         { name: "Good", value: stats.goodStatus },
@@ -618,7 +640,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
+      console.log("Getting category breakdown for systemType:", systemType);
       const data = await storage.getCategoryBreakdown(systemType);
       
       return res.status(200).json(data);
