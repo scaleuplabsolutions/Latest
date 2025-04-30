@@ -98,12 +98,14 @@ export class MemStorage implements IStorage {
     this.stockDeductionId = 1;
     this.activityId = 1;
     
-    // Add sample user
-    this.createUser({
-      username: "admin",
-      password: "password",
-      systemType: "store"
-    });
+    // Create default admin user
+    const adminUser: User = {
+      id: this.userId++,
+      username: 'admin',
+      password: 'password',
+      systemType: 'store'
+    };
+    this.users.set(adminUser.id, adminUser);
   }
 
   // User methods
