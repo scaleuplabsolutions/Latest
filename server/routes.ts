@@ -481,23 +481,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = req.query.category as string;
       const search = req.query.search as string;
       
+      // Get base items from storage
       let items = await storage.getExpiryItems(systemType, status as any);
       
-      // Process items to add daysLeft and status
+      // Process items to add daysLeft and ensure status is set
       const today = new Date();
-      items = items.map(item => {
+      const processedItems = items.map(item => {
         const expiryDate = new Date(item.expiryDate);
         const daysLeft = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
-        let itemStatus = 'good';
+        // Calculate status if not already set
+        let itemStatus = item.status || 'good';
         if (daysLeft < 0) {
           itemStatus = 'expired';
         } else if (daysLeft <= 7) {
           itemStatus = 'short-dated';
         } else if (daysLeft <= 14) {
           itemStatus = 'expiring-soon';
+        } else {
+          itemStatus = 'good';
         }
         
+        // Return enhanced item with calculated fields
         return {
           ...item,
           daysLeft,
@@ -505,20 +510,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Filter by category if provided
+      // Filter by category if provided (using supplier)
+      let filteredItems = processedItems;
       if (category) {
-        items = items.filter(item => item.supplier === category);
+        filteredItems = processedItems.filter(item => item.supplier === category);
       }
       
       // Filter by search term if provided
       if (search) {
-        items = items.filter(item => 
+        filteredItems = filteredItems.filter(item => 
           item.upc.includes(search) || 
           item.description.toLowerCase().includes(search.toLowerCase())
         );
       }
       
-      return res.status(200).json(items);
+      console.log("Expiry alerts sending data:", filteredItems.length, "items found");
+      
+      return res.status(200).json(filteredItems);
     } catch (error) {
       console.error("Expiry alerts error:", error);
       return res.status(500).json({ message: "Internal server error" });

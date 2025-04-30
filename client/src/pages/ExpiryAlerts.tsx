@@ -14,12 +14,15 @@ interface ExpiryItem {
   id: number;
   upc: string;
   description: string;
-  sdeptName?: string;
+  supplier?: string;
   batchNumber: string;
   remainingQty?: number;
   receivingDate: string;
   expiryDate: string;
+  daysLeft?: number;
   status?: string;
+  container?: string;
+  qtyReceived?: number;
 }
 
 type ExpiryStatus = 'all' | 'expired' | 'expiring-soon' | 'good' | 'short-dated';
