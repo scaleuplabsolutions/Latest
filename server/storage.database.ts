@@ -186,47 +186,74 @@ export class DatabaseStorage implements IStorage {
 
   // Expiry-related methods
   async getExpiryItems(systemType: string, status?: ExpiryStatus): Promise<ContainerItem[]> {
-    let query = db
-      .select()
-      .from(containerItems)
-      .where(and(
-        eq(containerItems.systemType, systemType),
-        gt(containerItems.remainingQty, 0)
-      ));
+    console.log("DatabaseStorage.getExpiryItems called with systemType:", systemType, "status:", status || "all");
     
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Initialize base query
+    let baseCondition = and(
+      eq(containerItems.systemType, systemType),
+      gt(containerItems.remainingQty, 0)
+    );
+    
+    // Add status filtering
     if (status) {
-      const today = new Date();
-      
       if (status === 'expired') {
-        query = query.where(lt(containerItems.expiryDate, today.toISOString().split('T')[0]));
+        // Expired: Earlier than today
+        baseCondition = and(
+          baseCondition,
+          lt(containerItems.expiryDate, todayStr)
+        );
       } else if (status === 'short-dated') {
+        // Short-dated: Between today and 7 days from now
         const shortDatedDate = new Date(today);
         shortDatedDate.setDate(today.getDate() + 7);
+        const shortDatedStr = shortDatedDate.toISOString().split('T')[0];
         
-        query = query.where(and(
-          gte(containerItems.expiryDate, today.toISOString().split('T')[0]),
-          lte(containerItems.expiryDate, shortDatedDate.toISOString().split('T')[0])
-        ));
+        baseCondition = and(
+          baseCondition,
+          gte(containerItems.expiryDate, todayStr),
+          lte(containerItems.expiryDate, shortDatedStr)
+        );
       } else if (status === 'expiring-soon') {
+        // Expiring soon: Between 8 and 14 days from now
         const shortDatedDate = new Date(today);
         shortDatedDate.setDate(today.getDate() + 7);
+        const shortDatedStr = shortDatedDate.toISOString().split('T')[0];
         
         const expiringSoonDate = new Date(today);
         expiringSoonDate.setDate(today.getDate() + 14);
+        const expiringSoonStr = expiringSoonDate.toISOString().split('T')[0];
         
-        query = query.where(and(
-          gt(containerItems.expiryDate, shortDatedDate.toISOString().split('T')[0]),
-          lte(containerItems.expiryDate, expiringSoonDate.toISOString().split('T')[0])
-        ));
+        baseCondition = and(
+          baseCondition,
+          gt(containerItems.expiryDate, shortDatedStr),
+          lte(containerItems.expiryDate, expiringSoonStr)
+        );
       } else if (status === 'good') {
+        // Good: More than 14 days from now
         const expiringSoonDate = new Date(today);
         expiringSoonDate.setDate(today.getDate() + 14);
+        const expiringSoonStr = expiringSoonDate.toISOString().split('T')[0];
         
-        query = query.where(gt(containerItems.expiryDate, expiringSoonDate.toISOString().split('T')[0]));
+        baseCondition = and(
+          baseCondition,
+          gt(containerItems.expiryDate, expiringSoonStr)
+        );
       }
     }
     
-    return await query.orderBy(asc(containerItems.expiryDate));
+    // Execute the query with our condition
+    const items = await db
+      .select()
+      .from(containerItems)
+      .where(baseCondition)
+      .orderBy(asc(containerItems.expiryDate));
+      
+    console.log("DatabaseStorage.getExpiryItems found", items.length, "items");
+    
+    return items;
   }
 
   async getDashboardStats(systemType: string): Promise<{

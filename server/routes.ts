@@ -246,6 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const systemType = ensureSystemType(req.session.systemType);
+      console.log("Inventory upload systemType:", systemType);
       const data = req.body.data;
       
       console.log("Inventory upload received data:", JSON.stringify(data).slice(0, 200) + "...");
@@ -528,13 +529,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const systemType = req.session.systemType;
+      const systemType = ensureSystemType(req.session.systemType);
       const status = req.query.status as string;
       const category = req.query.category as string;
       const search = req.query.search as string;
       
+      console.log("Getting expiry alerts for systemType:", systemType, "status:", status || "all");
+      
       // Get base items from storage
       let items = await storage.getExpiryItems(systemType, status as any);
+      
+      console.log("Expiry alerts sending data:", items.length, "items found");
       
       // Process items to add daysLeft and ensure status is set
       const today = new Date();
