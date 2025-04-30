@@ -106,6 +106,89 @@ export class MemStorage implements IStorage {
       systemType: 'store'
     };
     this.users.set(adminUser.id, adminUser);
+    
+    // Add sample container items for testing
+    this.addSampleContainerItems();
+  }
+  
+  // Helper method to add sample data for demonstration purposes
+  private addSampleContainerItems() {
+    const today = new Date();
+    const systemTypes = ["store", "warehouse"];
+    
+    // Generate dates relative to today for expiry demo
+    const getExpiryDate = (dayOffset: number) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() + dayOffset);
+      return date.toISOString().split('T')[0];
+    };
+    
+    // Create sample items for both store and warehouse
+    for (const systemType of systemTypes) {
+      // Expired items (past expiry)
+      this.createContainerItem({
+        container: "CONT-10001",
+        supplier: "Acme Foods",
+        upc: "1234567890123",
+        description: "Organic Milk 1L",
+        itemNumber: "MK1000",
+        receivingDate: getExpiryDate(-30),
+        batchNumber: "BATCH-10001",
+        qtyReceived: 24,
+        remainingQty: 15,
+        expiryDate: getExpiryDate(-5), // 5 days past expiry
+        status: "expired",
+        systemType
+      });
+      
+      // Short-dated items (0-7 days)
+      this.createContainerItem({
+        container: "CONT-10002",
+        supplier: "Fresh Foods Inc",
+        upc: "2234567890123",
+        description: "Fresh Yogurt 500g",
+        itemNumber: "YG500",
+        receivingDate: getExpiryDate(-14),
+        batchNumber: "BATCH-10002",
+        qtyReceived: 36,
+        remainingQty: 22,
+        expiryDate: getExpiryDate(3), // 3 days until expiry
+        status: "short-dated",
+        systemType
+      });
+      
+      // Expiring soon items (8-14 days)
+      this.createContainerItem({
+        container: "CONT-10003",
+        supplier: "Green Farm Produce",
+        upc: "3234567890123",
+        description: "Frozen Vegetables 1kg",
+        itemNumber: "FV1000",
+        receivingDate: getExpiryDate(-45),
+        batchNumber: "BATCH-10003",
+        qtyReceived: 50,
+        remainingQty: 42,
+        expiryDate: getExpiryDate(10), // 10 days until expiry
+        status: "expiring-soon",
+        systemType
+      });
+      
+      // Good status items (15+ days)
+      this.createContainerItem({
+        container: "CONT-10004",
+        supplier: "Healthy Harvest",
+        upc: "4234567890123",
+        description: "Canned Beans 400g",
+        itemNumber: "CB400",
+        receivingDate: getExpiryDate(-60),
+        batchNumber: "BATCH-10004",
+        qtyReceived: 100,
+        remainingQty: 95,
+        expiryDate: getExpiryDate(180), // 180 days until expiry
+        status: "good",
+        systemType
+      });
+    }
   }
 
   // User methods
