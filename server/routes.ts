@@ -353,35 +353,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Process in much smaller batches to avoid call stack limits
-      const BATCH_SIZE = 25; // Reduce batch size further
+      // Process with an extremely small batch size to avoid call stack limits
+      const BATCH_SIZE = 10; // Even smaller batch size
       let insertedCount = 0;
       
-      console.log(`Processing ${items.length} items in batches of ${BATCH_SIZE}`);
+      console.log(`Processing ${items.length} items in small batches of ${BATCH_SIZE}`);
       
-      // Limit to a reasonable number to prevent database overload
-      const MAX_ITEMS = 2000;
+      // Limit to a very conservative number to prevent database overload
+      const MAX_ITEMS = 1000;
       const itemsToProcess = items.slice(0, MAX_ITEMS);
       if (items.length > MAX_ITEMS) {
         console.log(`Limiting processing to ${MAX_ITEMS} of ${items.length} items to prevent overload`);
       }
       
-      for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
-        const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(itemsToProcess.length/BATCH_SIZE)}, size: ${batch.length}`);
-        
-        // Add additional delay between batches to prevent overload
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+      // Use an async function to process batches with better error handling
+      const processBatches = async () => {
+        for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
+          const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
+          const batchNumber = Math.floor(i/BATCH_SIZE) + 1;
+          const totalBatches = Math.ceil(itemsToProcess.length/BATCH_SIZE);
+          
+          console.log(`Processing batch ${batchNumber}/${totalBatches}, size: ${batch.length}`);
+          
+          // Add larger delay between batches to prevent overload
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          try {
+            // Process items one by one if needed for very problematic data
+            if (i === 0 && batch.length > 5) {
+              console.log("Using single-item processing for first batch to avoid potential issues");
+              for (const item of batch) {
+                try {
+                  const inserted = await storage.createInventoryItem(item);
+                  if (inserted) insertedCount++;
+                } catch (singleError) {
+                  console.error("Error processing single item:", singleError);
+                }
+                // Small delay between individual items
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            } else {
+              // Normal batch processing
+              const insertedBatch = await storage.createManyInventoryItems(batch);
+              insertedCount += insertedBatch.length;
+            }
+          } catch (error) {
+            console.error(`Error processing batch ${batchNumber}:`, error);
+            
+            // If the first batch fails, try one-by-one insertion as a fallback
+            if (batchNumber === 1) {
+              console.log("First batch failed, trying one-by-one insertion as fallback");
+              for (const item of batch) {
+                try {
+                  const inserted = await storage.createInventoryItem(item);
+                  if (inserted) insertedCount++;
+                } catch (singleError) {
+                  console.error("Error processing single item:", singleError);
+                }
+                // Small delay between individual items
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            }
+          }
         }
-        
-        try {
-          const insertedBatch = await storage.createManyInventoryItems(batch);
-          insertedCount += insertedBatch.length;
-        } catch (error) {
-          console.error(`Error processing batch ${Math.floor(i/BATCH_SIZE) + 1}:`, error);
-        }
-      }
+        return insertedCount;
+      };
+      
+      insertedCount = await processBatches();
       
       // Create activity
       await storage.createActivity({
@@ -544,35 +584,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Process in much smaller batches to avoid call stack limits
-      const BATCH_SIZE = 25; // Reduce batch size for containers too
+      // Process with an extremely small batch size to avoid call stack limits
+      const BATCH_SIZE = 10; // Even smaller batch size
       let insertedCount = 0;
       
-      console.log(`Processing ${items.length} container items in batches of ${BATCH_SIZE}`);
+      console.log(`Processing ${items.length} container items in small batches of ${BATCH_SIZE}`);
       
-      // Limit to a reasonable number to prevent database overload
-      const MAX_ITEMS = 2000;
+      // Limit to a very conservative number to prevent database overload
+      const MAX_ITEMS = 1000;
       const itemsToProcess = items.slice(0, MAX_ITEMS);
       if (items.length > MAX_ITEMS) {
         console.log(`Limiting processing to ${MAX_ITEMS} of ${items.length} items to prevent overload`);
       }
       
-      for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
-        const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(itemsToProcess.length/BATCH_SIZE)}, size: ${batch.length}`);
-        
-        // Add additional delay between batches to prevent overload
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+      // Use an async function to process batches with better error handling
+      const processBatches = async () => {
+        for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
+          const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
+          const batchNumber = Math.floor(i/BATCH_SIZE) + 1;
+          const totalBatches = Math.ceil(itemsToProcess.length/BATCH_SIZE);
+          
+          console.log(`Processing batch ${batchNumber}/${totalBatches}, size: ${batch.length}`);
+          
+          // Add larger delay between batches to prevent overload
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          try {
+            // Process items one by one if needed for very problematic data
+            if (i === 0 && batch.length > 5) {
+              console.log("Using single-item processing for first batch to avoid potential issues");
+              for (const item of batch) {
+                try {
+                  const inserted = await storage.createContainerItem(item);
+                  if (inserted) insertedCount++;
+                } catch (singleError) {
+                  console.error("Error processing single container item:", singleError);
+                }
+                // Small delay between individual items
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            } else {
+              // Normal batch processing
+              const insertedBatch = await storage.createManyContainerItems(batch);
+              insertedCount += insertedBatch.length;
+            }
+          } catch (error) {
+            console.error(`Error processing batch ${batchNumber}:`, error);
+            
+            // If the first batch fails, try one-by-one insertion as a fallback
+            if (batchNumber === 1) {
+              console.log("First batch failed, trying one-by-one insertion as fallback");
+              for (const item of batch) {
+                try {
+                  const inserted = await storage.createContainerItem(item);
+                  if (inserted) insertedCount++;
+                } catch (singleError) {
+                  console.error("Error processing single container item:", singleError);
+                }
+                // Small delay between individual items
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            }
+          }
         }
-        
-        try {
-          const insertedBatch = await storage.createManyContainerItems(batch);
-          insertedCount += insertedBatch.length;
-        } catch (error) {
-          console.error(`Error processing batch ${Math.floor(i/BATCH_SIZE) + 1}:`, error);
-        }
-      }
+        return insertedCount;
+      };
+      
+      insertedCount = await processBatches();
       
       // Create activity
       await storage.createActivity({
