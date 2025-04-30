@@ -37,7 +37,7 @@ const ExpiryAlerts: React.FC = () => {
   const initialStatus = ((urlParams.get('status') as ExpiryStatus) || 'all');
   
   const [status, setStatus] = useState<ExpiryStatus>(initialStatus);
-  const [category, setCategory] = useState<string>('');
+  const [category, setCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Get expiry items from API
@@ -47,7 +47,7 @@ const ExpiryAlerts: React.FC = () => {
       const [url, queryParams] = queryKey as [string, { status: string, category: string, search: string }];
       const searchParams = new URLSearchParams();
       if (queryParams.status && queryParams.status !== 'all') searchParams.append('status', queryParams.status);
-      if (queryParams.category) searchParams.append('category', queryParams.category);
+      if (queryParams.category && queryParams.category !== 'all') searchParams.append('category', queryParams.category);
       if (queryParams.search) searchParams.append('search', queryParams.search);
       
       const queryString = searchParams.toString();
@@ -180,7 +180,7 @@ const ExpiryAlerts: React.FC = () => {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}

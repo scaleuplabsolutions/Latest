@@ -510,9 +510,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Filter by category if provided (using supplier)
+      // Filter by category if provided (using supplier) and not 'all'
       let filteredItems = processedItems;
-      if (category) {
+      if (category && category !== 'all') {
         filteredItems = processedItems.filter(item => item.supplier === category);
       }
       
