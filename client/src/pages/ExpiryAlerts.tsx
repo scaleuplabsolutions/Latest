@@ -100,7 +100,8 @@ const ExpiryAlerts: React.FC = () => {
       cell: (row: ExpiryItem) => {
         const daysLeft = getDaysUntilExpiry(row.expiryDate);
         const textClass = daysLeft < 0 ? 'text-red-600 font-medium' : 
-                        daysLeft <= 7 ? 'text-amber-600 font-medium' : 
+                        daysLeft <= 7 ? 'text-orange-600 font-medium' : 
+                        daysLeft <= 14 ? 'text-amber-600 font-medium' :
                         'text-neutral-900';
         return <span className={textClass}>{daysLeft}</span>;
       }

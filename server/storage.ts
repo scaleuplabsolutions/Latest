@@ -295,9 +295,9 @@ export class MemStorage implements IStorage {
       switch (status) {
         case 'expired':
           return daysUntilExpiry < 0;
-        case 'expiring-soon':
-          return daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
         case 'short-dated':
+          return daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
+        case 'expiring-soon':
           return daysUntilExpiry > 7 && daysUntilExpiry <= 14;
         case 'good':
           return daysUntilExpiry > 14;
@@ -410,7 +410,8 @@ export class MemStorage implements IStorage {
     const categories = new Map<string, { count: number; expired: number; expiringSoon: number }>();
     
     for (const item of items) {
-      const category = item.sdeptName || 'Uncategorized';
+      // Use supplier as category for containers since they don't have sdeptName
+      const category = item.supplier || 'Uncategorized';
       const expiryDate = new Date(item.expiryDate);
       const daysUntilExpiry = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       
@@ -423,7 +424,8 @@ export class MemStorage implements IStorage {
       
       if (daysUntilExpiry < 0) {
         catStats.expired++;
-      } else if (daysUntilExpiry <= 7) {
+      } else if (daysUntilExpiry <= 14) {
+        // Include both short-dated (0-7 days) and expiring-soon (8-14 days)
         catStats.expiringSoon++;
       }
     }
@@ -513,9 +515,9 @@ export class MemStorage implements IStorage {
         if (daysUntilExpiry < 0) {
           status = 'expired';
         } else if (daysUntilExpiry <= 7) {
-          status = 'expiring-soon';
-        } else if (daysUntilExpiry <= 14) {
           status = 'short-dated';
+        } else if (daysUntilExpiry <= 14) {
+          status = 'expiring-soon';
         }
       }
       

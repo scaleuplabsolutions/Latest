@@ -17,9 +17,9 @@ export const getExpiryStatus = (daysUntilExpiry: number | string): 'expired' | '
   if (days < 0) {
     return 'expired';
   } else if (days <= 7) {
-    return 'expiring-soon';
-  } else if (days <= 14) {
     return 'short-dated';
+  } else if (days <= 14) {
+    return 'expiring-soon';
   } else {
     return 'good';
   }
