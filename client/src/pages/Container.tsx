@@ -94,7 +94,8 @@ const Container: React.FC = () => {
             columns={columns} 
             data={containerItems || []} 
             isLoading={isLoading}
-            searchPlaceholder="Search by Container ID or UPC"
+            searchPlaceholder="Search by UPC or Description"
+            categoryFilterKey="status"
           />
         </CardContent>
       </Card>

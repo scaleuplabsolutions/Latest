@@ -31,9 +31,9 @@ function getExpiryStatus(daysUntilExpiry: number): string {
   if (daysUntilExpiry < 0) {
     return "expired";
   } else if (daysUntilExpiry <= 7) {
-    return "expiring-soon";
-  } else if (daysUntilExpiry <= 14) {
     return "short-dated";
+  } else if (daysUntilExpiry <= 14) {
+    return "expiring-soon";
   } else {
     return "good";
   }

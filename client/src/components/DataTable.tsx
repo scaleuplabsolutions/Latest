@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Column {
   header: string;
   accessor: string;
   cell?: (row: any) => React.ReactNode;
+  filterable?: boolean;
 }
 
 interface DataTableProps {
@@ -15,6 +23,7 @@ interface DataTableProps {
   onSearch?: (searchTerm: string) => void;
   isSearchable?: boolean;
   isLoading?: boolean;
+  categoryFilterKey?: string;
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -24,10 +33,27 @@ const DataTable: React.FC<DataTableProps> = ({
   onSearch,
   isSearchable = true,
   isLoading = false,
+  categoryFilterKey,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const rowsPerPage = 10;
+
+  // Extract unique categories from data if categoryFilterKey is provided
+  useEffect(() => {
+    if (categoryFilterKey && data.length > 0) {
+      const categories = data
+        .map(item => item[categoryFilterKey])
+        .filter((value: any, index: number, self: any[]) => 
+          value && self.indexOf(value) === index
+        )
+        .sort();
+      
+      setAvailableCategories(['All', ...categories]);
+    }
+  }, [data, categoryFilterKey]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -38,18 +64,28 @@ const DataTable: React.FC<DataTableProps> = ({
     }
   };
 
-  // Only filter data internally if no external search handler
-  const filteredData = onSearch
-    ? data
-    : data.filter(row => {
-        if (!searchTerm) return true;
-        return Object.values(row).some(
-          value => 
-            value !== null && 
-            value !== undefined && 
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      });
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    setCurrentPage(1);
+  };
+
+  // Filter data based on search term and category
+  const filteredData = data.filter(row => {
+    // First apply search filter
+    const passesSearch = !searchTerm ? true : 
+      Object.values(row).some(
+        value => 
+          value !== null && 
+          value !== undefined && 
+          String(value).toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+    // Then apply category filter
+    const passesCategory = !selectedCategory || selectedCategory === 'All' ? true :
+      categoryFilterKey && row[categoryFilterKey] === selectedCategory;
+    
+    return passesSearch && passesCategory;
+  });
 
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
@@ -92,8 +128,28 @@ const DataTable: React.FC<DataTableProps> = ({
 
   return (
     <div>
-      {isSearchable && (
-        <div className="flex justify-end mb-4">
+      <div className="flex flex-wrap items-center justify-between mb-4">
+        {/* Category filter */}
+        {categoryFilterKey && availableCategories.length > 1 && (
+          <div className="flex items-center space-x-2 mb-2 sm:mb-0">
+            <Filter className="h-4 w-4 text-neutral-500" />
+            <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCategories.map((category, index) => (
+                  <SelectItem key={index} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        
+        {/* Search bar */}
+        {isSearchable && (
           <div className="relative rounded-md shadow-sm max-w-xs">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-neutral-500" />
@@ -106,8 +162,8 @@ const DataTable: React.FC<DataTableProps> = ({
               placeholder={searchPlaceholder}
             />
           </div>
-        </div>
-      )}
+        )}
+      </div>
       
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-neutral-200">

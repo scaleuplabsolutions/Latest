@@ -95,6 +95,7 @@ const Inventory: React.FC = () => {
             data={inventoryItems || []} 
             isLoading={isLoading}
             searchPlaceholder="Search by UPC or Description"
+            categoryFilterKey="sdeptName"
           />
         </CardContent>
       </Card>
