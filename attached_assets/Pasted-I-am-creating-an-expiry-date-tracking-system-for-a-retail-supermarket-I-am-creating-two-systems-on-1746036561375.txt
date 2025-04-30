@@ -1,0 +1,18 @@
+I am creating an expiry date tracking system for a retail supermarket. I am creating two systems, one for store and one for warehouse. The store and warehouse system should have the same pages but they would used for different purposes. On the authentication page, there should be options to select either warehouse or store. 
+Now the system should have the following pages and functionalities:
+Dashboard Page: this should have cards displaying the following info: Expired products, expiring soon, total products, good status products and short-dated products. 
+Inventory Page: this is where the user would upload the inventory currently in the store. This page should have a file upload to upload excel, csv,xlsx files. Once the file is uploaded it should go into a table below with the headings: UPC, Ven_code, Description, Size, WH2QTY, RVSBONDQTY, SDeptName, Vendor_id, StoreQty, HOSTQty, Cost, Price, Gross_Margin. These headings would be in the uploaded file, ensure the upload is not sensitive to caps lock etc. 
+Container Page: this is where the user would upload the container of goods recently received. This page should have a file upload to upload excel, csv,xlsx files. Once the file is uploaded it should go into a table below with the headings: CONTAINER, SUPPLIER	, UPC, DESCRIPTION, ITEM #, RECEIVING DATE, BATCH #, QTY REC, EXPIRY DATE. These headings would be in the uploaded file, ensure the upload is not sensitive to caps lock etc.
+Expiry Alerts Page: this tab should show the following tabs: all expiry dates, expiring soon, expired products, good products. There should be a search bar so the user can search for the upc, then the table should filter to show that particular upc. There should be a filter for the table for category, so if a category is selected, the table would filter based on that particular category.
+Reports: this should show 4 graphs:  a pie chart for expired, expiring soon, good status and short dated products, category breakdown trend bar graph, a monthly and a weekly comparison.
+Overview: This page should have a clear data button and an export button to export info. The table should have the following headings: UPC, Shelf Expiry Estimate, Total Stock, Daily Stock, Sales, Batch Numbers, Status
+
+Stock Deduction & Expiry Logic (FEFO-Based) Page:  To ensure the most efficient and safe use of inventory, this system follows a First-Expire-First-Out (FEFO) strategy, meaning that products are sold in the order of their expiry dates, not their arrival dates. This logic ensures the store reduces waste and sells items before they expire.
+🧠 How FEFO Works in the System:
+1.	Each inventory item is tracked with its expiry date and batch number.
+2.	When a sale is made (e.g., StoreQty is reduced):
+o	The system looks for all available batches of the item.
+o	It sorts these batches by soonest expiry date.
+o	It deducts the sold quantity from the batch with the earliest expiry date first, and continues to the next earliest batch if needed.
+3.	If multiple batches have the same expiry date, the system falls back to FIFO (First-In-First-Out), using the oldest received batch.
+
