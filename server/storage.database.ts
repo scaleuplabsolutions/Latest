@@ -675,7 +675,7 @@ export class DatabaseStorage implements IStorage {
     });
     
     // Sort by days left (ascending) so critical items appear first
-    return overviewItems.sort((a, b) => {
+    return overviewItems.sort((a: any, b: any) => {
       // If a has no days left (no container), put it at the end
       if (a.daysLeft === 0 && b.daysLeft !== 0) return 1;
       // If b has no days left (no container), put it at the end
