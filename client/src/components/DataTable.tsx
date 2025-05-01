@@ -165,15 +165,15 @@ const DataTable: React.FC<DataTableProps> = ({
         )}
       </div>
       
-      <div>
-        <table className="w-full table-fixed divide-y divide-neutral-200">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-full divide-y divide-neutral-200">
           <thead className="bg-neutral-50">
             <tr>
               {columns.map((column, index) => (
                 <th
                   key={index}
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider break-words"
+                  className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   {column.header}
                 </th>
@@ -191,7 +191,7 @@ const DataTable: React.FC<DataTableProps> = ({
               paginatedData.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                   {columns.map((column, colIndex) => (
-                    <td key={colIndex} className="px-6 py-4 text-sm text-neutral-900 break-words">
+                    <td key={colIndex} className="px-6 py-4 text-sm text-neutral-900 whitespace-nowrap">
                       {column.cell ? column.cell(row) : row[column.accessor]}
                     </td>
                   ))}
