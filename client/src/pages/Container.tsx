@@ -28,15 +28,41 @@ interface ContainerItem {
 }
 
 const Container: React.FC = () => {
-  const { getSystemName } = useSystemType();
+  const { getSystemName, isWarehouse } = useSystemType();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
 
+  // Create column definitions based on system type (store vs warehouse)
+  const columns = [
+    ...(isWarehouse ? [] : [{ header: 'Container', accessor: 'container' }]),
+    { header: 'Supplier', accessor: 'supplier' },
+    { header: 'UPC', accessor: 'upc' },
+    { header: 'Description', accessor: 'description' },
+    { header: 'Item #', accessor: 'itemNumber' },
+    { header: 'Receiving Date', accessor: 'receivingDate' },
+    { header: 'Batch #', accessor: 'batchNumber' },
+    { header: 'Qty Rec', accessor: 'qtyReceived' },
+    { header: 'Expiry Date', accessor: 'expiryDate' },
+    { 
+      header: 'Status', 
+      accessor: 'status',
+      cell: (row: ContainerItem) => <StatusBadge status={row.status || 'unknown'} />
+    }
+  ];
+
+  // Set page text based on system type
+  const pageTitle = isWarehouse ? "Receiving Management" : "Container Management";
+  const recordsLabel = isWarehouse ? "Receiving Records" : "Container Records";
+  const uploadTitle = isWarehouse ? "Upload Receiving File" : "Upload Container File";
+  const tableTitle = isWarehouse ? "Recent Receivings" : "Recent Containers";
+
+  // Query container data
   const { data: containerItems, isLoading } = useQuery<ContainerItem[]>({
     queryKey: ['/api/containers']
   });
 
+  // Clear data mutation
   const clearDataMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/overview/clear');
@@ -119,30 +145,6 @@ const Container: React.FC = () => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
-
-  const { isWarehouse } = useSystemType();
-
-  // Create columns array, conditionally removing Container column for warehouse
-  const columns = [
-    ...(isWarehouse ? [] : [{ header: 'Container', accessor: 'container' }]),
-    { header: 'Supplier', accessor: 'supplier' },
-    { header: 'UPC', accessor: 'upc' },
-    { header: 'Description', accessor: 'description' },
-    { header: 'Item #', accessor: 'itemNumber' },
-    { header: 'Receiving Date', accessor: 'receivingDate' },
-    { header: 'Batch #', accessor: 'batchNumber' },
-    { header: 'Qty Rec', accessor: 'qtyReceived' },
-    { header: 'Expiry Date', accessor: 'expiryDate' },
-    { 
-      header: 'Status', 
-      accessor: 'status',
-      cell: (row: ContainerItem) => <StatusBadge status={row.status || 'unknown'} />
-    }
-  ];
-  const pageTitle = isWarehouse ? "Receiving Management" : "Container Management";
-  const recordsLabel = isWarehouse ? "Receiving Records" : "Container Records";
-  const uploadTitle = isWarehouse ? "Upload Receiving File" : "Upload Container File";
-  const tableTitle = isWarehouse ? "Recent Receivings" : "Recent Containers";
 
   return (
     <div>
