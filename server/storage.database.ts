@@ -328,21 +328,27 @@ export class DatabaseStorage implements IStorage {
   
   // FEFO logic
   async deductStockWithFEFO(upc: string, quantity: number, systemType: string): Promise<boolean> {
+    console.log(`Deducting ${quantity} units of UPC ${upc} for system ${systemType}`);
+    
     const containerItemsForUPC = await this.getContainerItemsByUPC(upc, systemType);
     
     if (containerItemsForUPC.length === 0) {
+      console.log(`No container items found for UPC ${upc}`);
       return false;
     }
     
     // Calculate total remaining quantity for this UPC
     const totalRemainingQty = containerItemsForUPC.reduce((sum, item) => sum + (item.remainingQty || 0), 0);
+    console.log(`Total remaining quantity for UPC ${upc}: ${totalRemainingQty}`);
     
     // Check if we have enough inventory to satisfy the deduction
     if (totalRemainingQty < quantity) {
+      console.log(`Insufficient stock for UPC ${upc}. Required: ${quantity}, Available: ${totalRemainingQty}`);
       return false;
     }
     
     let remainingToDeduct = quantity;
+    console.log(`Starting FEFO deduction with ${containerItemsForUPC.length} container items`);
     
     // Loop through container items in FEFO order (already sorted by expiry date)
     for (const item of containerItemsForUPC) {
@@ -350,40 +356,56 @@ export class DatabaseStorage implements IStorage {
       
       const remainingQty = item.remainingQty || 0;
       
-      if (remainingQty <= 0) continue;
+      if (remainingQty <= 0) {
+        console.log(`Skipping container item #${item.id} - no remaining quantity`);
+        continue;
+      }
       
       const deductFromThisItem = Math.min(remainingQty, remainingToDeduct);
       const newRemainingQty = remainingQty - deductFromThisItem;
       
-      // Update the container item with new remaining quantity
-      await this.updateContainerItem(item.id, { 
-        remainingQty: newRemainingQty
-      });
+      console.log(`Deducting ${deductFromThisItem} units from container item #${item.id}`);
+      console.log(`Original quantity: ${remainingQty}, New quantity: ${newRemainingQty}`);
       
-      // Create a stock deduction record
-      await this.createStockDeduction({
-        systemType,
-        upc,
-        description: item.description,
-        batchNumber: item.batchNumber,
-        expiryDate: item.expiryDate,
-        qtyDeducted: deductFromThisItem,
-        fefoApplied: true
-      });
-      
-      // Create activity for this deduction
-      await this.createActivity({
-        systemType,
-        type: 'stock-deduction',
-        title: `Stock Deduction: ${deductFromThisItem} units of ${item.description}`,
-        description: `Deducted ${deductFromThisItem} units of ${item.description} (UPC: ${upc}, Batch: ${item.batchNumber})`,
-        category: 'inventory'
-      });
-      
-      remainingToDeduct -= deductFromThisItem;
+      try {
+        // Update the container item with new remaining quantity
+        const updatedItem = await this.updateContainerItem(item.id, { 
+          remainingQty: newRemainingQty
+        });
+        
+        if (!updatedItem) {
+          console.error(`Failed to update container item #${item.id}`);
+          continue;
+        }
+        
+        // Create a stock deduction record
+        await this.createStockDeduction({
+          systemType,
+          upc,
+          description: item.description,
+          batchNumber: item.batchNumber,
+          expiryDate: item.expiryDate,
+          qtyDeducted: deductFromThisItem,
+          fefoApplied: true
+        });
+        
+        // Create activity for this deduction
+        await this.createActivity({
+          systemType,
+          type: 'stock-deduction',
+          title: `Stock Deduction: ${deductFromThisItem} units of ${item.description}`,
+          description: `Deducted ${deductFromThisItem} units of ${item.description} (UPC: ${upc}, Batch: ${item.batchNumber})`,
+          category: 'inventory'
+        });
+        
+        remainingToDeduct -= deductFromThisItem;
+        console.log(`Remaining to deduct: ${remainingToDeduct}`);
+      } catch (error) {
+        console.error(`Error during stock deduction for item #${item.id}:`, error);
+      }
     }
     
-    return true;
+    return remainingToDeduct <= 0;
   }
   
   // Report-related methods
