@@ -550,6 +550,8 @@ export class DatabaseStorage implements IStorage {
       totalQty: number;
       description: string;
       earliestExpiry: string;
+      batchNumber: string;  // Store the batch number of earliest expiry item
+      receivingDate: string;  // Store the receiving date of earliest expiry item
     }>();
     
     containers.forEach(container => {
@@ -558,7 +560,9 @@ export class DatabaseStorage implements IStorage {
           batches: [],
           totalQty: 0,
           description: container.description,
-          earliestExpiry: container.expiryDate
+          earliestExpiry: container.expiryDate,
+          batchNumber: container.batchNumber,
+          receivingDate: container.receivingDate
         });
       }
       
@@ -573,6 +577,8 @@ export class DatabaseStorage implements IStorage {
       // Update earliest expiry date
       if (new Date(container.expiryDate) < new Date(data.earliestExpiry)) {
         data.earliestExpiry = container.expiryDate;
+        data.batchNumber = container.batchNumber;
+        data.receivingDate = container.receivingDate;
       }
     });
     
@@ -670,6 +676,8 @@ export class DatabaseStorage implements IStorage {
         stockDeductions: totalDeducted,
         remainingQuantity,
         expiryDate: containerData?.earliestExpiry || '',
+        batchNumber: containerData?.batchNumber || '',
+        receivingDate: containerData?.receivingDate || '',
         status: containerData ? getExpiryStatus(daysUntilExpiry) : ''
       });
     });

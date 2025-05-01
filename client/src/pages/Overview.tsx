@@ -24,6 +24,8 @@ interface OverviewItem {
   receivedStock?: number;
   stockDeductions?: number;
   remainingQuantity?: number;
+  batchNumber?: string;
+  receivingDate?: string;
   
   // Store-specific fields
   dailyStock?: number;
@@ -141,6 +143,27 @@ const Overview: React.FC = () => {
       accessor: 'remainingQuantity',
       cell: (row: OverviewItem) => (
         <span className="font-bold">{row.remainingQuantity}</span>
+      )
+    },
+    { 
+      header: 'Batch Number', 
+      accessor: 'batchNumber',
+      cell: (row: OverviewItem) => (
+        <span className="text-sm font-medium">{row.batchNumber || 'N/A'}</span>
+      )
+    },
+    { 
+      header: 'Expiry Date', 
+      accessor: 'expiryDate',
+      cell: (row: OverviewItem) => (
+        <span className="text-sm">{row.expiryDate || 'N/A'}</span>
+      )
+    },
+    { 
+      header: 'Received Date', 
+      accessor: 'receivingDate',
+      cell: (row: OverviewItem) => (
+        <span className="text-sm">{row.receivingDate || 'N/A'}</span>
       )
     },
     { 
