@@ -224,19 +224,19 @@ export class DatabaseStorage implements IStorage {
   async getExpiryItems(systemType: string, status?: ExpiryStatus): Promise<ContainerItem[]> {
     console.log("DatabaseStorage.getExpiryItems called with systemType:", systemType, "status:", status || "all");
     
-    // Get ALL container items for this system with remaining quantity
+    // Get ALL container items for this system, regardless of remaining quantity
     try {
-      // Basic query to get items with a non-zero remaining quantity for this system
+      // Get all container items for the system - show all items regardless of quantity
       const items = await db
         .select()
         .from(containerItems)
-        .where(and(
-          eq(containerItems.systemType, systemType),
-          gt(containerItems.remainingQty, 0)
-        ))
+        .where(
+          eq(containerItems.systemType, systemType)
+          // Removed the remaining quantity filter to show all items
+        )
         .orderBy(asc(containerItems.expiryDate));
       
-      console.log("DatabaseStorage.getExpiryItems found", items.length, "items before status filtering");
+      console.log("DatabaseStorage.getExpiryItems found", items.length, "total items before status filtering");
       
       // If no items found or no status filter needed, return all items
       // Note: TypeScript has a warning here, but our logic handles the 'all' case at the route level
