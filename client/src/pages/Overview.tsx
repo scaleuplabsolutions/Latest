@@ -12,19 +12,30 @@ import { Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface OverviewItem {
+  // Common fields
   upc: string;
   description: string;
   daysLeft: number;
-  inventoryStock: number;
-  receivedStock: number;
-  stockDeductions: number;
-  remainingQuantity: number;
-  expiryDate?: string;
   status?: string;
+  expiryDate?: string;
+  
+  // Warehouse-specific fields
+  inventoryStock?: number;
+  receivedStock?: number;
+  stockDeductions?: number;
+  remainingQuantity?: number;
+  
+  // Store-specific fields
+  dailyStock?: number;
+  totalStock?: number;
+  batchNumbers?: string;
+  sales?: string | number;
+  shelfExpiryEstimate?: string;
+  salesTrend?: string;
 }
 
 const Overview: React.FC = () => {
-  const { getSystemName } = useSystemType();
+  const { getSystemName, systemType, isWarehouse } = useSystemType();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,7 +99,8 @@ const Overview: React.FC = () => {
     setSearchTerm(term);
   };
 
-  const columns = [
+  // Define columns based on system type
+  const warehouseColumns = [
     { header: 'UPC', accessor: 'upc' },
     { header: 'Description', accessor: 'description' },
     { 
@@ -137,6 +149,60 @@ const Overview: React.FC = () => {
       cell: (row: OverviewItem) => <StatusBadge status={row.status || 'unknown'} />
     }
   ];
+  
+  // Store columns - keep the original format
+  const storeColumns = [
+    { header: 'UPC', accessor: 'upc' },
+    { header: 'Description', accessor: 'description' },
+    { 
+      header: 'Days Left', 
+      accessor: 'daysLeft',
+      cell: (row: OverviewItem) => {
+        const daysLeft = row.daysLeft;
+        const textClass = daysLeft < 0 ? 'text-red-600 font-medium' : 
+                        daysLeft <= 7 ? 'text-orange-600 font-medium' : 
+                        daysLeft <= 14 ? 'text-amber-600 font-medium' :
+                        'text-neutral-900';
+        return <span className={textClass}>{daysLeft}</span>;
+      }
+    },
+    { 
+      header: 'Daily Stock', 
+      accessor: 'dailyStock',
+      cell: (row: OverviewItem) => (
+        <span className="font-medium">{row.dailyStock || 0}</span>
+      )
+    },
+    { 
+      header: 'Total Stock', 
+      accessor: 'totalStock',
+      cell: (row: OverviewItem) => (
+        <span className="font-medium">{row.totalStock || 0}</span>
+      )
+    },
+    { 
+      header: 'Batch Numbers', 
+      accessor: 'batchNumbers',
+      cell: (row: OverviewItem) => (
+        <span className="text-sm">{row.batchNumbers || 'N/A'}</span>
+      )
+    },
+    { 
+      header: 'Sales', 
+      accessor: 'sales',
+      cell: (row: OverviewItem) => (
+        <span>{row.sales}</span>
+      )
+    },
+    { 
+      header: 'Status', 
+      accessor: 'status',
+      cell: (row: OverviewItem) => <StatusBadge status={row.status || 'unknown'} />
+    }
+  ];
+  
+  // Use the appropriate columns based on system type
+  const columns = systemType === 'warehouse' ? warehouseColumns : storeColumns;
 
   return (
     <div>

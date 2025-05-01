@@ -577,7 +577,7 @@ export class DatabaseStorage implements IStorage {
     });
     
     // Create overview items
-    const overviewItems = [];
+    const overviewItems: any[] = [];
     
     // Calculate sales trends based on deductions
     const salesTrends = new Map<string, 'increasing' | 'decreasing' | 'stable'>();
@@ -622,9 +622,9 @@ export class DatabaseStorage implements IStorage {
     inventory.forEach(item => allUPCs.add(item.upc));
     
     // Process each UPC to create new overview structure
-    // Use spread operator to convert Set to Array for compatibility
-    const upcsArray = [...allUPCs];
-    for (const upc of upcsArray) {
+    // Convert Set to Array manually to avoid compatibility issues
+    const upcsArray = Array.from(allUPCs);
+    upcsArray.forEach(upc => {
       // Get inventory item for this UPC if exists
       const inventoryItem = inventory.find(item => item.upc === upc);
       
@@ -632,7 +632,7 @@ export class DatabaseStorage implements IStorage {
       const containerData = containersByUPC.get(upc);
       
       // Skip if we don't have either inventory or container data
-      if (!inventoryItem && !containerData) continue;
+      if (!inventoryItem && !containerData) return; // Using return instead of continue in forEach
       
       // Get all stock deductions for this UPC
       const upcDeductions = deductions.filter(d => d.upc === upc);
@@ -672,7 +672,7 @@ export class DatabaseStorage implements IStorage {
         expiryDate: containerData?.earliestExpiry || '',
         status: containerData ? getExpiryStatus(daysUntilExpiry) : ''
       });
-    }
+    });
     
     // Sort by days left (ascending) so critical items appear first
     return overviewItems.sort((a, b) => {
