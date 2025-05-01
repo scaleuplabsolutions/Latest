@@ -137,23 +137,29 @@ const Container: React.FC = () => {
     }
   ];
 
+  const { isWarehouse } = useSystemType();
+  const pageTitle = isWarehouse ? "Receiving Management" : "Container Management";
+  const recordsLabel = isWarehouse ? "Receiving Records" : "Container Records";
+  const uploadTitle = isWarehouse ? "Upload Receiving File" : "Upload Container File";
+  const tableTitle = isWarehouse ? "Recent Receivings" : "Recent Containers";
+
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-neutral-900">Container Management</h1>
-        <p className="mt-1 text-sm text-neutral-600">{getSystemName()} Container Records</p>
+        <h1 className="text-2xl font-semibold text-neutral-900">{pageTitle}</h1>
+        <p className="mt-1 text-sm text-neutral-600">{getSystemName()} {recordsLabel}</p>
       </div>
 
       {/* File Upload Section */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Upload Container File</CardTitle>
+          <CardTitle>{uploadTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <FileUpload 
             endpoint="/api/containers/upload" 
             onSuccess={handleUploadSuccess}
-            fileTypeMessage="Upload your container file (Excel, CSV, XLSX) to update the recently received goods."
+            fileTypeMessage={`Upload your ${isWarehouse ? 'receiving' : 'container'} file (Excel, CSV, XLSX) to update the recently received goods.`}
           />
         </CardContent>
       </Card>
@@ -162,7 +168,7 @@ const Container: React.FC = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Recent Containers</CardTitle>
+            <CardTitle>{tableTitle}</CardTitle>
             <p className="mt-1 max-w-2xl text-sm text-neutral-500">
               Last updated: {containerItems?.length && containerItems[0].lastUpdated 
                 ? formatDate(containerItems[0].lastUpdated) 

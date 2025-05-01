@@ -10,7 +10,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
   const [location] = useLocation();
-  const { getSystemName, getSystemIcon } = useSystemType();
+  const { getSystemName, getSystemIcon, isWarehouse } = useSystemType();
   const { logout } = useAuth();
   const { username } = useSystemContext();
 
@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
             <Link href="/container">
               <a className={getNavItemClasses('/container')}>
                 <span className="material-icons mr-3 h-6 w-6">inventory_2</span>
-                Container
+                {isWarehouse ? "Receiving" : "Container"}
               </a>
             </Link>
             <Link href="/expiry-alerts">

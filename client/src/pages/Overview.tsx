@@ -14,14 +14,13 @@ import { useToast } from '@/hooks/use-toast';
 interface OverviewItem {
   upc: string;
   description: string;
-  shelfExpiryEstimate: string;
-  totalStock: number;
-  dailyStock: number;
-  sales: string;
-  batchNumbers: string;
-  status: string;
-  daysLeft?: number;
-  salesTrend?: 'increasing' | 'decreasing' | 'stable';
+  daysLeft: number;
+  inventoryStock: number;
+  receivedStock: number;
+  stockDeductions: number;
+  remainingQuantity: number;
+  expiryDate?: string;
+  status?: string;
 }
 
 const Overview: React.FC = () => {
@@ -90,18 +89,10 @@ const Overview: React.FC = () => {
     { header: 'UPC', accessor: 'upc' },
     { header: 'Description', accessor: 'description' },
     { 
-      header: 'Shelf Expiry', 
-      accessor: 'shelfExpiryEstimate',
-      cell: (row: OverviewItem) => {
-        const date = new Date(row.shelfExpiryEstimate).toLocaleDateString();
-        return <span>{date}</span>;
-      }
-    },
-    { 
       header: 'Days Left', 
       accessor: 'daysLeft',
       cell: (row: OverviewItem) => {
-        const daysLeft = row.daysLeft || 0;
+        const daysLeft = row.daysLeft;
         const textClass = daysLeft < 0 ? 'text-red-600 font-medium' : 
                         daysLeft <= 7 ? 'text-orange-600 font-medium' : 
                         daysLeft <= 14 ? 'text-amber-600 font-medium' :
@@ -110,60 +101,37 @@ const Overview: React.FC = () => {
       }
     },
     { 
-      header: 'Total Stock', 
-      accessor: 'totalStock',
+      header: 'Inventory Stock', 
+      accessor: 'inventoryStock',
       cell: (row: OverviewItem) => (
-        <span className="font-medium">{row.totalStock}</span>
+        <span className="font-medium">{row.inventoryStock}</span>
       )
     },
     { 
-      header: 'Daily Stock', 
-      accessor: 'dailyStock',
+      header: 'Received Stock', 
+      accessor: 'receivedStock',
       cell: (row: OverviewItem) => (
-        <span>{row.dailyStock}</span>
+        <span className="font-medium">{row.receivedStock}</span>
       )
     },
     { 
-      header: 'Sales', 
-      accessor: 'sales',
-      cell: (row: OverviewItem) => {
-        const trend = row.salesTrend;
-        const trendIcon = trend === 'increasing' ? '↑' : 
-                        trend === 'decreasing' ? '↓' : 
-                        trend === 'stable' ? '→' : '';
-        const trendClass = trend === 'increasing' ? 'text-green-600' : 
-                        trend === 'decreasing' ? 'text-red-600' : 
-                        'text-neutral-500';
-        
-        return (
-          <div className="flex items-center">
-            <span>{row.sales}</span>
-            {trend && (
-              <span className={`ml-2 ${trendClass}`}>{trendIcon}</span>
-            )}
-          </div>
-        );
-      }
+      header: 'Stock Deductions', 
+      accessor: 'stockDeductions',
+      cell: (row: OverviewItem) => (
+        <span className="text-red-600">{row.stockDeductions}</span>
+      )
     },
     { 
-      header: 'Batch Numbers', 
-      accessor: 'batchNumbers',
-      cell: (row: OverviewItem) => {
-        const batches = row.batchNumbers.split(', ');
-        return (
-          <span className="text-xs">
-            {batches.length > 2 
-              ? `${batches.slice(0, 2).join(', ')} +${batches.length - 2} more`
-              : row.batchNumbers
-            }
-          </span>
-        );
-      }
+      header: 'Remaining Quantity', 
+      accessor: 'remainingQuantity',
+      cell: (row: OverviewItem) => (
+        <span className="font-bold">{row.remainingQuantity}</span>
+      )
     },
     { 
       header: 'Status', 
       accessor: 'status',
-      cell: (row: OverviewItem) => <StatusBadge status={row.status} />
+      cell: (row: OverviewItem) => <StatusBadge status={row.status || 'unknown'} />
     }
   ];
 
