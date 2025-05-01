@@ -616,29 +616,72 @@ export class DatabaseStorage implements IStorage {
       }
     });
     
-    for (const [upc, containerData] of containersByUPC.entries()) {
-      // Find the inventory item for this UPC
+    // Get all unique UPCs from both containers and inventory
+    const allUPCs = new Set<string>();
+    containers.forEach(item => allUPCs.add(item.upc));
+    inventory.forEach(item => allUPCs.add(item.upc));
+    
+    // Process each UPC to create new overview structure
+    // Convert Set to Array to avoid compatibility issues
+    const upcsArray = Array.from(allUPCs);
+    for (const upc of upcsArray) {
+      // Get inventory item for this UPC if exists
       const inventoryItem = inventory.find(item => item.upc === upc);
       
-      const daysUntilExpiry = calculateDaysUntilExpiry(containerData.earliestExpiry);
+      // Get container data for this UPC if exists
+      const containerData = containersByUPC.get(upc);
       
+      // Skip if we don't have either inventory or container data
+      if (!inventoryItem && !containerData) continue;
+      
+      // Get all stock deductions for this UPC
+      const upcDeductions = deductions.filter(d => d.upc === upc);
+      const totalDeducted = upcDeductions.reduce((sum, d) => sum + d.qtyDeducted, 0);
+      
+      // Get inventory stock (hostQty field from inventory)
+      const inventoryStock = inventoryItem?.hostQty || 0;
+      
+      // Get received stock (from containers)
+      const receivedStock = containerData?.totalQty || 0;
+      
+      // Calculate remaining quantity based on business rules:
+      // First deplete inventory stock, then use received stock
+      let remainingQuantity = 0;
+      
+      if (inventoryStock > totalDeducted) {
+        // Inventory stock is enough to cover deductions
+        remainingQuantity = inventoryStock - totalDeducted;
+      } else {
+        // Inventory stock is depleted, use received stock for remaining
+        const remainingDeductions = totalDeducted - inventoryStock;
+        remainingQuantity = Math.max(0, receivedStock - remainingDeductions);
+      }
+      
+      // Get the days until expiry
+      const daysUntilExpiry = containerData ? calculateDaysUntilExpiry(containerData.earliestExpiry) : 0;
+      
+      // Create the overview item with the new structure
       overviewItems.push({
         upc,
-        description: containerData.description,
-        shelfExpiryEstimate: containerData.earliestExpiry,
-        totalStock: containerData.totalQty,
-        dailyStock: inventoryItem?.storeQty || 0,  // Use store quantity as daily stock
-        sales: inventoryItem?.grossMargin || 'N/A',
-        batchNumbers: containerData.batches.join(', '),
-        status: getExpiryStatus(daysUntilExpiry),
+        description: inventoryItem?.description || (containerData ? containerData.description : 'Unknown'),
         daysLeft: daysUntilExpiry,
-        salesTrend: salesTrends.get(upc) || 'stable'
+        inventoryStock,
+        receivedStock,
+        stockDeductions: totalDeducted,
+        remainingQuantity,
+        expiryDate: containerData?.earliestExpiry || '',
+        status: containerData ? getExpiryStatus(daysUntilExpiry) : ''
       });
     }
     
-    // Sort by expiry date (earliest first)
+    // Sort by days left (ascending) so critical items appear first
     return overviewItems.sort((a, b) => {
-      return new Date(a.shelfExpiryEstimate).getTime() - new Date(b.shelfExpiryEstimate).getTime();
+      // If a has no days left (no container), put it at the end
+      if (a.daysLeft === 0 && b.daysLeft !== 0) return 1;
+      // If b has no days left (no container), put it at the end
+      if (b.daysLeft === 0 && a.daysLeft !== 0) return -1;
+      // Otherwise sort by days left (ascending)
+      return a.daysLeft - b.daysLeft;
     });
   }
   

@@ -34,7 +34,10 @@ const Overview: React.FC = () => {
     queryFn: async ({ queryKey }) => {
       const [url, params] = queryKey;
       const searchParams = new URLSearchParams();
-      if (params.search) searchParams.append('search', params.search as string);
+      
+      // Fix the type issue with params
+      const queryParams = params as { search?: string };
+      if (queryParams.search) searchParams.append('search', queryParams.search);
       
       const queryString = searchParams.toString();
       const response = await fetch(`${url}${queryString ? `?${queryString}` : ''}`);
