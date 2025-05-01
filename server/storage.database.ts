@@ -622,8 +622,8 @@ export class DatabaseStorage implements IStorage {
     inventory.forEach(item => allUPCs.add(item.upc));
     
     // Process each UPC to create new overview structure
-    // Convert Set to Array to avoid compatibility issues
-    const upcsArray = Array.from(allUPCs);
+    // Use spread operator to convert Set to Array for compatibility
+    const upcsArray = [...allUPCs];
     for (const upc of upcsArray) {
       // Get inventory item for this UPC if exists
       const inventoryItem = inventory.find(item => item.upc === upc);
