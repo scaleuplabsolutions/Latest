@@ -122,8 +122,8 @@ export class MemStorage implements IStorage {
     const adminUser: User = {
       id: this.userId++,
       username: 'admin',
-      password: 'password',
-      systemType: 'store'
+      password: 'admin',  // Match the actual password being used
+      systemType: 'warehouse'  // Match the system type in the session
     };
     this.users.set(adminUser.id, adminUser);
     
