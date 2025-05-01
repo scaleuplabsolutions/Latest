@@ -622,23 +622,22 @@ export class DatabaseStorage implements IStorage {
       }
     });
     
-    // Get all unique UPCs from both containers and inventory
+    // Get all unique UPCs from containers ONLY (not from inventory)
     const allUPCs = new Set<string>();
     containers.forEach(item => allUPCs.add(item.upc));
-    inventory.forEach(item => allUPCs.add(item.upc));
     
     // Process each UPC to create new overview structure
     // Convert Set to Array manually to avoid compatibility issues
     const upcsArray = Array.from(allUPCs);
     upcsArray.forEach(upc => {
-      // Get inventory item for this UPC if exists
+      // Get inventory item for this UPC if exists (for stock calculations)
       const inventoryItem = inventory.find(item => item.upc === upc);
       
-      // Get container data for this UPC if exists
+      // Get container data for this UPC
       const containerData = containersByUPC.get(upc);
       
-      // Skip if we don't have either inventory or container data
-      if (!inventoryItem && !containerData) return; // Using return instead of continue in forEach
+      // Skip if we don't have container data
+      if (!containerData) return; // Using return instead of continue in forEach
       
       // Get all stock deductions for this UPC
       const upcDeductions = deductions.filter(d => d.upc === upc);
@@ -666,19 +665,19 @@ export class DatabaseStorage implements IStorage {
       // Get the days until expiry
       const daysUntilExpiry = containerData ? calculateDaysUntilExpiry(containerData.earliestExpiry) : 0;
       
-      // Create the overview item with the new structure
+      // Create the overview item with the new structure - use description from container data
       overviewItems.push({
         upc,
-        description: inventoryItem?.description || (containerData ? containerData.description : 'Unknown'),
+        description: containerData.description,
         daysLeft: daysUntilExpiry,
         inventoryStock,
         receivedStock,
         stockDeductions: totalDeducted,
         remainingQuantity,
-        expiryDate: containerData?.earliestExpiry || '',
-        batchNumber: containerData?.batchNumber || '',
-        receivingDate: containerData?.receivingDate || '',
-        status: containerData ? getExpiryStatus(daysUntilExpiry) : ''
+        expiryDate: containerData.earliestExpiry,
+        batchNumber: containerData.batchNumber,
+        receivingDate: containerData.receivingDate,
+        status: getExpiryStatus(daysUntilExpiry)
       });
     });
     

@@ -120,8 +120,11 @@ const Container: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const { isWarehouse } = useSystemType();
+
+  // Create columns array, conditionally removing Container column for warehouse
   const columns = [
-    { header: 'Container', accessor: 'container' },
+    ...(isWarehouse ? [] : [{ header: 'Container', accessor: 'container' }]),
     { header: 'Supplier', accessor: 'supplier' },
     { header: 'UPC', accessor: 'upc' },
     { header: 'Description', accessor: 'description' },
@@ -136,8 +139,6 @@ const Container: React.FC = () => {
       cell: (row: ContainerItem) => <StatusBadge status={row.status || 'unknown'} />
     }
   ];
-
-  const { isWarehouse } = useSystemType();
   const pageTitle = isWarehouse ? "Receiving Management" : "Container Management";
   const recordsLabel = isWarehouse ? "Receiving Records" : "Container Records";
   const uploadTitle = isWarehouse ? "Upload Receiving File" : "Upload Container File";
