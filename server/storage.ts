@@ -381,18 +381,28 @@ export class MemStorage implements IStorage {
   
   // Expiry-related methods
   async getExpiryItems(systemType: string, status?: ExpiryStatus): Promise<ContainerItem[]> {
-    const items = Array.from(this.containerItems.values())
-      .filter(item => item.systemType === systemType);
+    console.log("MemStorage.getExpiryItems called with systemType:", systemType, "status:", status || "all");
     
-    if (!status || status === 'all') {
+    // Get all items for this system with remaining quantity
+    const items = Array.from(this.containerItems.values())
+      .filter(item => item.systemType === systemType && (item.remainingQty || 0) > 0);
+
+    console.log("MemStorage.getExpiryItems found", items.length, "items before status filtering");
+    
+    // If no status filter is specified or if there are no items, return all items
+    if (!status || items.length === 0) {
+      console.log("MemStorage.getExpiryItems returning all items (no status filter)");
       return items;
     }
     
-    // Check expiry status
+    // Check expiry status with date normalization for accurate day calculation
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    return items.filter(item => {
+    const filteredItems = items.filter(item => {
       const expiryDate = new Date(item.expiryDate);
+      expiryDate.setHours(0, 0, 0, 0);
+      
       const daysUntilExpiry = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       
       switch (status) {
@@ -408,6 +418,9 @@ export class MemStorage implements IStorage {
           return true;
       }
     });
+    
+    console.log("MemStorage.getExpiryItems returning", filteredItems.length, "items after status filtering");
+    return filteredItems;
   }
   
   async getDashboardStats(systemType: string): Promise<{ 

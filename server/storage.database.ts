@@ -224,31 +224,40 @@ export class DatabaseStorage implements IStorage {
   async getExpiryItems(systemType: string, status?: ExpiryStatus): Promise<ContainerItem[]> {
     console.log("DatabaseStorage.getExpiryItems called with systemType:", systemType, "status:", status || "all");
     
-    // Basic check for items with a non-zero remaining quantity for this system
-    let query = db
-      .select()
-      .from(containerItems)
-      .where(and(
-        eq(containerItems.systemType, systemType),
-        gt(containerItems.remainingQty, 0)
-      ))
-      .orderBy(asc(containerItems.expiryDate));
-    
-    const items = await query;
-    console.log("DatabaseStorage.getExpiryItems found", items.length, "items");
-    
-    // If status filtering is required, do it in-memory since date comparisons 
-    // can be tricky with different date formats
-    if (status && items.length > 0) {
+    // Get ALL container items for this system with remaining quantity
+    try {
+      // Basic query to get items with a non-zero remaining quantity for this system
+      const items = await db
+        .select()
+        .from(containerItems)
+        .where(and(
+          eq(containerItems.systemType, systemType),
+          gt(containerItems.remainingQty, 0)
+        ))
+        .orderBy(asc(containerItems.expiryDate));
+      
+      console.log("DatabaseStorage.getExpiryItems found", items.length, "items before status filtering");
+      
+      // If no items found or no status filter needed, return all items
+      // Note: TypeScript has a warning here, but our logic handles the 'all' case at the route level
+      // by converting it to undefined before calling this function
+      if (items.length === 0 || !status) {
+        return items;
+      }
+      
+      // If status filtering is required, do it in-memory with precise date calculations
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      return items.filter(item => {
+      const filteredItems = items.filter(item => {
+        // Convert expiry date string to Date object
         const expiryDate = new Date(item.expiryDate);
         expiryDate.setHours(0, 0, 0, 0);
         
+        // Calculate days until expiry
         const daysDiff = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
+        // Filter based on requested status
         if (status === 'expired' && daysDiff < 0) {
           return true;
         } else if (status === 'short-dated' && daysDiff >= 0 && daysDiff <= 7) {
@@ -261,9 +270,14 @@ export class DatabaseStorage implements IStorage {
         
         return false;
       });
+      
+      console.log("DatabaseStorage.getExpiryItems returning", filteredItems.length, "items after status filtering");
+      return filteredItems;
+      
+    } catch (error) {
+      console.error("Error in getExpiryItems:", error);
+      return [];
     }
-    
-    return items;
   }
 
   async getDashboardStats(systemType: string): Promise<{

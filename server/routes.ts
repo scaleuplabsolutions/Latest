@@ -684,17 +684,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = req.query.category as string;
       const search = req.query.search as string;
       
-      console.log("Getting expiry alerts for systemType:", systemType, "status:", status || "all");
+      console.log(`[DEBUG] Getting expiry alerts for systemType: ${systemType}, status: ${status || "all"}, category: ${category || "all"}, search: ${search || "none"}`);
       
-      // Get base items from storage
-      let items = await storage.getExpiryItems(systemType, status as any);
+      // First get all container items to verify that data exists
+      const allContainers = await storage.getContainerItems(systemType);
+      console.log(`[DEBUG] Total container items for ${systemType}: ${allContainers.length}`);
       
-      console.log("Expiry alerts sending data:", items.length, "items found");
+      // Count items with remaining quantity
+      const activeContainers = allContainers.filter(item => (item.remainingQty || 0) > 0);
+      console.log(`[DEBUG] Active container items with remaining quantity: ${activeContainers.length}`);
+      
+      // Get base items from storage with status filtering
+      // Convert 'all' to undefined since the ExpiryStatus type doesn't include 'all'
+      const statusFilter = (status && status !== 'all') ? (status as any) : undefined;
+      let items = await storage.getExpiryItems(systemType, statusFilter);
+      console.log(`[DEBUG] Filtered expiry items after getExpiryItems: ${items.length}`);
       
       // Process items to add daysLeft and ensure status is set
       const today = new Date();
       const processedItems = items.map(item => {
+        // Calculate days until expiry properly
         const expiryDate = new Date(item.expiryDate);
+        // Normalize dates by setting time to midnight for accurate day calculation
+        today.setHours(0, 0, 0, 0);
+        expiryDate.setHours(0, 0, 0, 0);
+        
         const daysLeft = Math.round((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
         // Calculate status if not already set
@@ -717,10 +731,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
+      console.log(`[DEBUG] Items after processing expiry dates: ${processedItems.length}`);
+      
       // Filter by category if provided (using supplier) and not 'all'
       let filteredItems = processedItems;
       if (category && category !== 'all') {
         filteredItems = processedItems.filter(item => item.supplier === category);
+        console.log(`[DEBUG] Items after category filter '${category}': ${filteredItems.length}`);
       }
       
       // Filter by search term if provided
@@ -729,9 +746,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           item.upc.includes(search) || 
           item.description.toLowerCase().includes(search.toLowerCase())
         );
+        console.log(`[DEBUG] Items after search filter '${search}': ${filteredItems.length}`);
       }
       
-      console.log("Expiry alerts sending data:", filteredItems.length, "items found");
+      console.log(`[DEBUG] Final expiry alerts item count: ${filteredItems.length}`);
       
       return res.status(200).json(filteredItems);
     } catch (error) {
